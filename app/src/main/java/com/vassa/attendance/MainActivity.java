@@ -350,7 +350,7 @@ public class MainActivity extends AppCompatActivity {
 
         final EditText input = new EditText(this);
         input.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_VARIATION_PASSWORD);
-        input.setHint("Enter Admin PIN (Default: 25955)");
+        input.setHint("Enter Secret Admin PIN");
         builder.setView(input);
 
         builder.setPositiveButton("Unlock", (dialog, which) -> {
