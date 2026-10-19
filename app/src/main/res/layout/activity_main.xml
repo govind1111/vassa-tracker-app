@@ -24,7 +24,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="24/7 Real-Time GPS Tracking & Attendance"
+            android:text="24/7 Real-Time GPS Tracking and Attendance"
             android:textColor="#94A3B8"
             android:textSize="12sp"
             android:gravity="center"
@@ -72,7 +72,7 @@
             android:id="@+id/btnCheckIn"
             android:layout_width="match_parent"
             android:layout_height="54dp"
-            android:text="✅ CHECK-IN & START DUTY"
+            android:text="✅ CHECK-IN AND START DUTY"
             android:textColor="#FFFFFF"
             android:textSize="14sp"
             android:textStyle="bold"
