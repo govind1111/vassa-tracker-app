@@ -190,7 +190,7 @@ public class MainActivity extends AppCompatActivity {
             } catch (Exception ignored) {}
         }
         if (sitesList.isEmpty()) {
-            sitesList.add(new ProjectSite("SITE-01", "Golden City Center (Main Office)", 19.874668, 75.372983, 100f));
+            sitesList.add(new ProjectSite("SITE-01", "Golden City Center (Main Office)", 19.905984, 75.359430, 100f));
             sitesList.add(new ProjectSite("SITE-02", "Waluj Mahanagar-1", 19.888512, 75.465034, 100f));
             sitesList.add(new ProjectSite("SITE-03", "Waluj Mahanagar-2", 19.839045, 75.321078, 100f));
             sitesList.add(new ProjectSite("SITE-04", "Shendra MIDC - Shendra", 19.831567, 75.315023, 100f));
