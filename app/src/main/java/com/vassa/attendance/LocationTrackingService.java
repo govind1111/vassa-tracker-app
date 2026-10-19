@@ -39,8 +39,8 @@ public class LocationTrackingService extends Service {
     private static final String CHANNEL_ID = "vassa_tracking_channel";
     private static final int NOTIFICATION_ID = 25955;
 
-    // Default Webhook URL (Linked directly to Google Apps Script)
-    public static final String DEFAULT_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycby1bYzPfBAuC9niiJMBHTa4JPx5HjZog1yEnzj9oTzKbIv7EwDGX76dZ_jZHFUemQUR/exec";
+    // Active Webhook URL (Linked directly to Google Apps Script)
+    public static final String DEFAULT_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbxGLLU_zjd3fV5fYfDL8w-dIHI2p-4_f0dOFojexKjaLmUcuFRbmThySpoCzlm5xAXuNQ/exec";
 
     private FusedLocationProviderClient fusedLocationClient;
     private LocationCallback locationCallback;
@@ -124,8 +124,8 @@ public class LocationTrackingService extends Service {
         new Thread(() -> {
             try {
                 SharedPreferences prefs = getSharedPreferences("VassaPrefs", MODE_PRIVATE);
-                String empId = prefs.getString("emp_id", "VP-004");
-                String empName = prefs.getString("emp_name", "Staff Member");
+                String empId = prefs.getString("locked_emp_id", prefs.getString("emp_id", "VP-004"));
+                String empName = prefs.getString("locked_emp_name", prefs.getString("emp_name", "Govind Gore"));
                 String webhookUrl = prefs.getString("webhook_url", DEFAULT_WEBHOOK_URL);
 
                 // Get battery level
@@ -159,7 +159,7 @@ public class LocationTrackingService extends Service {
                 int code = conn.getResponseCode();
                 String timeStr = new SimpleDateFormat("hh:mm a", Locale.getDefault()).format(new Date());
 
-                if (code == 200) {
+                if (code == 200 || code == 302) {
                     Log.i(TAG, "✅ [GPS PUSH SUCCESS] " + empName + " lat=" + location.getLatitude() + " lon=" + location.getLongitude() + " at " + timeStr);
                     // Update notification with latest location timestamp
                     NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);

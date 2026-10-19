@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.vassa.attendance">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!-- Permissions required for 24/7 background GPS tracking even when screen is locked -->
     <uses-permission android:name="android.permission.INTERNET" />
@@ -16,9 +15,9 @@
 
     <application
         android:allowBackup="true"
-        android:icon="@android:drawable/sym_def_app_icon"
+        android:icon="@drawable/ic_launcher"
         android:label="Vassa Attendance"
-        android:roundIcon="@android:drawable/sym_def_app_icon"
+        android:roundIcon="@drawable/ic_launcher"
         android:supportsRtl="true"
         android:theme="@style/Theme.VassaAttendance"
         android:usesCleartextTraffic="true">

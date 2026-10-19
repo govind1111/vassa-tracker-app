@@ -2,175 +2,351 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#0F172A"
-    android:padding="20dp">
+    android:background="#F1F5F9"
+    android:fillViewport="true">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical">
+        android:orientation="vertical"
+        android:padding="16dp">
 
-        <!-- Header -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="VASSA PROPERTIES"
-            android:textColor="#38BDF8"
-            android:textSize="24sp"
-            android:textStyle="bold"
-            android:gravity="center"
-            android:letterSpacing="0.08" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="24/7 Real-Time GPS Tracking and Attendance"
-            android:textColor="#94A3B8"
-            android:textSize="12sp"
-            android:gravity="center"
-            android:layout_marginBottom="16dp" />
-
-        <!-- Status Card -->
+        <!-- 1. Top Brand Card (White Dashboard Theme) -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="#1E293B"
-            android:padding="16dp"
+            android:background="@drawable/bg_card_white"
             android:orientation="vertical"
-            android:layout_marginBottom="16dp">
+            android:padding="18dp"
+            android:gravity="center"
+            android:layout_marginBottom="14dp">
 
             <TextView
-                android:id="@+id/tvStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="VASSA PROPERTIES"
+                android:textColor="#0284C7"
+                android:textSize="22sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.06" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Staff Attendance and GPS Geofence System"
+                android:textColor="#64748B"
+                android:textSize="12sp"
+                android:layout_marginTop="2dp" />
+
+            <TextView
+                android:id="@+id/tvLiveClock"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="--:--:--"
+                android:textColor="#0F172A"
+                android:textSize="26sp"
+                android:textStyle="bold"
+                android:layout_marginTop="8dp" />
+
+            <TextView
+                android:id="@+id/tvLiveDate"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="--"
+                android:textColor="#64748B"
+                android:textSize="12sp"
+                android:layout_marginTop="2dp" />
+
+            <TextView
+                android:id="@+id/tvShiftTag"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🕒 Shift: 10:00 AM — 07:00 PM"
+                android:textColor="#0369A1"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:background="@drawable/bg_pill_shift"
+                android:paddingLeft="12dp"
+                android:paddingRight="12dp"
+                android:paddingTop="4dp"
+                android:paddingBottom="4dp"
+                android:layout_marginTop="8dp" />
+        </LinearLayout>
+
+        <!-- Main Card Container -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_card_white"
+            android:orientation="vertical"
+            android:padding="18dp"
+            android:layout_marginBottom="14dp">
+
+            <!-- 2. Locked Staff Profile Badge (Anti-Proxy) -->
+            <LinearLayout
+                android:id="@+id/llProfileBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="🟢 24/7 BACKGROUND TRACKING: ACTIVE"
-                android:textColor="#34D399"
+                android:background="@drawable/bg_card_profile_locked"
+                android:orientation="horizontal"
+                android:padding="14dp"
+                android:gravity="center_vertical"
+                android:visibility="gone"
+                android:layout_marginBottom="14dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="🔒 DEVICE LOCKED TO STAFF"
+                        android:textColor="#059669"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:letterSpacing="0.04" />
+
+                    <TextView
+                        android:id="@+id/tvProfileName"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Govind Gore"
+                        android:textColor="#0F172A"
+                        android:textSize="17sp"
+                        android:textStyle="bold"
+                        android:layout_marginTop="2dp" />
+
+                    <TextView
+                        android:id="@+id/tvProfileMeta"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="VP-004 • Director / Founder"
+                        android:textColor="#047857"
+                        android:textSize="12sp"
+                        android:layout_marginTop="2dp" />
+                </LinearLayout>
+
+                <Button
+                    android:id="@+id/btnResetAdmin"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:text="Reset (Admin)"
+                    android:textColor="#334155"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:background="@drawable/bg_btn_switch"
+                    android:paddingLeft="10dp"
+                    android:paddingRight="10dp" />
+            </LinearLayout>
+
+            <!-- 3. Staff Selection (Shown when device is not locked) -->
+            <LinearLayout
+                android:id="@+id/llStaffSelectGroup"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginBottom="14dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="1. SELECT YOUR NAME (DEVICE WILL LOCK):"
+                    android:textColor="#475569"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.04"
+                    android:layout_marginBottom="6dp" />
+
+                <Spinner
+                    android:id="@+id/spStaff"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:background="@drawable/bg_spinner"
+                    android:paddingLeft="12dp"
+                    android:paddingRight="12dp" />
+            </LinearLayout>
+
+            <!-- 4. Live Punch Status Banner -->
+            <LinearLayout
+                android:id="@+id/llBannerStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_radar_inside"
+                android:orientation="vertical"
+                android:padding="12dp"
+                android:gravity="center"
+                android:visibility="gone"
+                android:layout_marginBottom="14dp">
+
+                <TextView
+                    android:id="@+id/tvBannerTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="🟢 Check-In Recorded Today!"
+                    android:textColor="#047857"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvBannerTime"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Time: --:-- (Present)"
+                    android:textColor="#0F172A"
+                    android:textSize="12sp"
+                    android:layout_marginTop="2dp" />
+
+                <TextView
+                    android:id="@+id/tvBannerWarn"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="⚡ Duty active hai. Kaam khatam hone par niche se Check-Out karein."
+                    android:textColor="#047857"
+                    android:textSize="11sp"
+                    android:layout_marginTop="4dp" />
+            </LinearLayout>
+
+            <!-- 5. Site Selection -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginBottom="14dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="2. CURRENT DUTY LOCATION / PROJECT SITE:"
+                    android:textColor="#475569"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.04"
+                    android:layout_marginBottom="6dp" />
+
+                <Spinner
+                    android:id="@+id/spLocation"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:background="@drawable/bg_spinner"
+                    android:paddingLeft="12dp"
+                    android:paddingRight="12dp" />
+            </LinearLayout>
+
+            <!-- 6. GPS Geofence Radar Card -->
+            <LinearLayout
+                android:id="@+id/llRadarCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_radar_locating"
+                android:orientation="horizontal"
+                android:padding="12dp"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="16dp">
+
+                <TextView
+                    android:id="@+id/tvRadarIcon"
+                    android:layout_width="38dp"
+                    android:layout_height="38dp"
+                    android:text="📡"
+                    android:textSize="20sp"
+                    android:gravity="center"
+                    android:layout_marginRight="10dp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/tvRadarTitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Detecting GPS Location..."
+                        android:textColor="#0369A1"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvRadarDesc"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Checking 100m geofence radius"
+                        android:textColor="#0284C7"
+                        android:textSize="11sp"
+                        android:layout_marginTop="2dp" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- 7. Dynamic Action Buttons -->
+            <Button
+                android:id="@+id/btnCheckIn"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:text="🔒 Check-In Blocked (Select Name)"
+                android:textColor="#FFFFFF"
                 android:textSize="14sp"
-                android:textStyle="bold" />
+                android:textStyle="bold"
+                android:background="@drawable/bg_btn_disabled"
+                android:enabled="false"
+                android:layout_marginBottom="10dp" />
+
+            <Button
+                android:id="@+id/btnCheckOut"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:text="🚪 CHECK-OUT (END DUTY)"
+                android:textColor="#FFFFFF"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:background="@drawable/bg_btn_checkout"
+                android:visibility="gone"
+                android:layout_marginBottom="10dp" />
+
+            <!-- 8. Compact Telemetry Ping Button -->
+            <Button
+                android:id="@+id/btnManualPing"
+                android:layout_width="match_parent"
+                android:layout_height="44dp"
+                android:text="📍 Ping My Location Now"
+                android:textColor="#0284C7"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:background="@drawable/bg_btn_ping" />
 
             <TextView
-                android:id="@+id/tvEmpDetails"
+                android:id="@+id/tvPingStatus"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="👤 Govind Gore (VP-004) • Director"
-                android:textColor="#F8FAFC"
-                android:textSize="13sp"
+                android:text="Live GPS auto-sync active in background"
+                android:textColor="#64748B"
+                android:textSize="11sp"
+                android:gravity="center"
                 android:layout_marginTop="6dp" />
 
             <TextView
-                android:id="@+id/tvLastSync"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="📡 Pings every 5 mins even when screen is locked"
-                android:textColor="#64748B"
+                android:text="⏰ Shift: 10:00 AM – 07:00 PM. Grace period till 10:15 AM.\nDaily attendance summary is automatically sent to Boss at 11:00 AM."
+                android:textColor="#94A3B8"
                 android:textSize="11sp"
-                android:layout_marginTop="4dp" />
+                android:gravity="center"
+                android:layout_marginTop="12dp" />
+
         </LinearLayout>
 
-        <!-- Quick Action Buttons -->
-        <Button
-            android:id="@+id/btnCheckIn"
-            android:layout_width="match_parent"
-            android:layout_height="54dp"
-            android:text="✅ CHECK-IN AND START DUTY"
-            android:textColor="#FFFFFF"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:backgroundTint="#10B981"
-            android:layout_marginBottom="12dp" />
-
-        <Button
-            android:id="@+id/btnToggleTracking"
-            android:layout_width="match_parent"
-            android:layout_height="54dp"
-            android:text="▶️ START REAL-TIME TRACKING"
-            android:textColor="#FFFFFF"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:backgroundTint="#0284C7"
-            android:layout_marginBottom="20dp" />
-
-        <!-- Staff Configuration Card -->
+        <!-- Footer / Settings Link -->
         <TextView
+            android:id="@+id/tvAdminSettings"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="STAFF PROFILE CONFIGURATION"
-            android:textColor="#94A3B8"
+            android:text="⚙️ Google Apps Script Endpoint Settings"
+            android:textColor="#64748B"
             android:textSize="11sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="6dp" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="#1E293B"
-            android:padding="16dp"
-            android:orientation="vertical">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Employee ID:"
-                android:textColor="#94A3B8"
-                android:textSize="11sp" />
-
-            <EditText
-                android:id="@+id/etEmpId"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:hint="VP-004"
-                android:textColor="#FFFFFF"
-                android:textColorHint="#475569"
-                android:background="#0F172A"
-                android:padding="10dp"
-                android:layout_marginBottom="10dp" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Staff Full Name:"
-                android:textColor="#94A3B8"
-                android:textSize="11sp" />
-
-            <EditText
-                android:id="@+id/etEmpName"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:hint="Govind Gore"
-                android:textColor="#FFFFFF"
-                android:textColorHint="#475569"
-                android:background="#0F172A"
-                android:padding="10dp"
-                android:layout_marginBottom="10dp" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Google Sheets Apps Script Webhook:"
-                android:textColor="#94A3B8"
-                android:textSize="11sp" />
-
-            <EditText
-                android:id="@+id/etWebhook"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:hint="https://script.google.com/macros/s/.../exec"
-                android:textColor="#FFFFFF"
-                android:textColorHint="#475569"
-                android:background="#0F172A"
-                android:padding="10dp"
-                android:textSize="11sp"
-                android:layout_marginBottom="14dp" />
-
-            <Button
-                android:id="@+id/btnSaveConfig"
-                android:layout_width="match_parent"
-                android:layout_height="46dp"
-                android:text="💾 SAVE STAFF PROFILE"
-                android:textColor="#FFFFFF"
-                android:textStyle="bold"
-                android:backgroundTint="#334155" />
-        </LinearLayout>
+            android:gravity="center"
+            android:padding="8dp" />
 
     </LinearLayout>
 </ScrollView>
