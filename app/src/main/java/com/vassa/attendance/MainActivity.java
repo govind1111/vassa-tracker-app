@@ -87,6 +87,15 @@ public class MainActivity extends AppCompatActivity {
     private Handler clockHandler = new Handler(Looper.getMainLooper());
     private Runnable clockRunnable;
 
+    private Handler sheetPollHandler = new Handler(Looper.getMainLooper());
+    private Runnable sheetPollRunnable = new Runnable() {
+        @Override
+        public void run() {
+            syncLiveMetadataFromSheet(false);
+            sheetPollHandler.postDelayed(this, 15000); // Auto-reconcile with Google Sheet every 15s
+        }
+    };
+
     // Data Models
     public static class StaffMember {
         public String id;
@@ -312,7 +321,9 @@ public class MainActivity extends AppCompatActivity {
         // 3. Check-Out Button
         btnCheckOut.setOnClickListener(v -> recordAttendancePunch("Check-Out"));
 
-        // 4. Manual Location Ping Button
+        // 4. Manual Location Ping Button (Guaranteed Visible Label)
+        btnManualPing.setText("📍 PING / MANUAL LOCATION SYNC");
+        btnManualPing.setTextColor(0xFF0369A1);
         btnManualPing.setOnClickListener(v -> sendManualTelemetryPing());
 
         // 5. Admin Settings Dialog (Webhook Endpoint)
@@ -625,7 +636,10 @@ public class MainActivity extends AppCompatActivity {
         }
 
         btnManualPing.setEnabled(false);
+        btnManualPing.setText("⏳ PINGING LOCATION...");
         tvPingStatus.setText("📡 Acquiring high-accuracy GPS coordinates...");
+        // Ensure continuous 5-minute background auto-sync service is running!
+        startLocationService();
 
         try {
             fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null)
@@ -689,6 +703,7 @@ public class MainActivity extends AppCompatActivity {
 
                 runOnUiThread(() -> {
                     btnManualPing.setEnabled(true);
+                    btnManualPing.setText("📍 PING / MANUAL LOCATION SYNC");
                     if (code == 200 || code == 302) {
                         tvPingStatus.setText("🟢 Location synced with Google Sheet (" + timeNow + ")");
                         Toast.makeText(this, "✅ Live Location Ping Sent! Saved in Live_Tracking tab.", Toast.LENGTH_SHORT).show();
@@ -699,6 +714,7 @@ public class MainActivity extends AppCompatActivity {
             } catch (Exception e) {
                 runOnUiThread(() -> {
                     btnManualPing.setEnabled(true);
+                    btnManualPing.setText("📍 PING / MANUAL LOCATION SYNC");
                     tvPingStatus.setText("⚠️ Ping sync error: " + e.getMessage());
                 });
             }
@@ -732,12 +748,18 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
         startContinuousLocationUpdates();
         syncLiveMetadataFromSheet(false);
+        if (prefs.getBoolean("has_checked_in", false)) {
+            startLocationService();
+        }
+        sheetPollHandler.removeCallbacks(sheetPollRunnable);
+        sheetPollHandler.postDelayed(sheetPollRunnable, 15000);
     }
 
     @Override
     protected void onPause() {
         super.onPause();
         stopContinuousLocationUpdates();
+        sheetPollHandler.removeCallbacks(sheetPollRunnable);
     }
 
     @Override
@@ -788,6 +810,20 @@ public class MainActivity extends AppCompatActivity {
     private void checkAndRequestPermissions() {
         if (!hasLocationPermissions()) {
             requestLocationPermissions();
+        }
+        requestBatteryOptimizationExemption();
+    }
+
+    private void requestBatteryOptimizationExemption() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            android.os.PowerManager pm = (android.os.PowerManager) getSystemService(Context.POWER_SERVICE);
+            if (pm != null && !pm.isIgnoringBatteryOptimizations(getPackageName())) {
+                try {
+                    Intent intent = new Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+                    intent.setData(android.net.Uri.parse("package:" + getPackageName()));
+                    startActivity(intent);
+                } catch (Exception ignored) {}
+            }
         }
     }
 
@@ -861,6 +897,15 @@ public class MainActivity extends AppCompatActivity {
                 }
 
                 List<StaffMember> newStaff = new ArrayList<>();
+                boolean foundMyAttendanceInSheet = false;
+                boolean sheetHasCheckedIn = false;
+                boolean sheetHasCheckedOut = false;
+                String sheetCheckInTime = "-";
+                String sheetCheckOutTime = "-";
+
+                String myEmpId = prefs.getString("locked_emp_id", "VP-004");
+                String myEmpName = prefs.getString("locked_emp_name", "Govind Gore");
+
                 if (staffArr != null && staffArr.length() > 0) {
                     for (int j = 0; j < staffArr.length(); j++) {
                         JSONObject stObj = staffArr.getJSONObject(j);
@@ -869,8 +914,57 @@ public class MainActivity extends AppCompatActivity {
                         String stRole = stObj.optString("role", "Staff");
                         String stDept = stObj.optString("dept", "Office");
                         newStaff.add(new StaffMember(stId, stName, stRole, stDept));
+
+                        // Reconcile real-time today attendance status for current logged-in user
+                        if (stId.equalsIgnoreCase(myEmpId) || stName.equalsIgnoreCase(myEmpName)) {
+                            foundMyAttendanceInSheet = true;
+                            sheetHasCheckedIn = stObj.optBoolean("hasCheckedIn", false) || stObj.optBoolean("hasPunchedToday", false);
+                            sheetHasCheckedOut = stObj.optBoolean("hasCheckedOut", false);
+                            sheetCheckInTime = stObj.optString("checkInTime", stObj.optString("punchTime", "-"));
+                            sheetCheckOutTime = stObj.optString("checkOutTime", "-");
+                        }
                     }
                     prefs.edit().putString("cached_staff_json", staffArr.toString()).apply();
+                }
+
+                // =========================================================================
+                // REAL-TIME GROUND TRUTH RECONCILIATION WITH GOOGLE SHEET:
+                // If entries were deleted in Google Sheet (or day was reset):
+                // Reset Android local state immediately to 'Ready to Check-In'!
+                // =========================================================================
+                if (foundMyAttendanceInSheet) {
+                    boolean localCheckedIn = prefs.getBoolean("has_checked_in", false);
+                    boolean localCheckedOut = prefs.getBoolean("has_checked_out", false);
+
+                    if (!sheetHasCheckedIn && !sheetHasCheckedOut) {
+                        // Google Sheet has NO punches today! (e.g. Govind ji deleted rows in Sheet)
+                        if (localCheckedIn || localCheckedOut) {
+                            android.util.Log.i("MainActivity", "🔄 Realtime Sheet Sync: Sheet has no punch records today! Resetting app to Check-In Ready.");
+                            prefs.edit()
+                                    .putBoolean("has_checked_in", false)
+                                    .putBoolean("has_checked_out", false)
+                                    .putString("checkin_time", "-")
+                                    .putString("checkout_time", "-")
+                                    .apply();
+                            stopLocationService();
+                        }
+                    } else if (sheetHasCheckedIn && !sheetHasCheckedOut) {
+                        // Sheet confirms staff is ON DUTY
+                        prefs.edit()
+                                .putBoolean("has_checked_in", true)
+                                .putBoolean("has_checked_out", false)
+                                .putString("checkin_time", sheetCheckInTime)
+                                .apply();
+                    } else if (sheetHasCheckedIn && sheetHasCheckedOut) {
+                        // Sheet confirms staff has CHECKED OUT
+                        prefs.edit()
+                                .putBoolean("has_checked_in", true)
+                                .putBoolean("has_checked_out", true)
+                                .putString("checkin_time", sheetCheckInTime)
+                                .putString("checkout_time", sheetCheckOutTime)
+                                .apply();
+                        stopLocationService();
+                    }
                 }
 
                 final String shiftText = (settingsObj != null) ? settingsObj.optString("shiftText", null) : null;
@@ -905,8 +999,11 @@ public class MainActivity extends AppCompatActivity {
                         tvShiftTag.setText(shiftText);
                     }
 
+                    // Refresh UI based on updated real-time Sheet state
+                    updateUI();
+
                     if (isManual) {
-                        Toast.makeText(this, "✅ " + sitesList.size() + " Sites Synced from Google Sheet!", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, "✅ Synced with Google Sheet! (" + sitesList.size() + " Sites)", Toast.LENGTH_SHORT).show();
                     }
                 });
             } catch (Exception e) {
