@@ -57,7 +57,7 @@ public class MainActivity extends AppCompatActivity {
     public static final String MASTER_ADMIN_PIN = "25955";
 
     // Active Google Apps Script Deployment URL
-    public static final String DEFAULT_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbxGLLU_zjd3fV5fYfDL8w-dIHI2p-4_f0dOFojexKjaLmUcuFRbmThySpoCzlm5xAXuNQ/exec";
+    public static final String DEFAULT_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycby1bYzPfBAuC9niiJMBHTa4JPx5HjZog1yEnzj9oTzKbIv7EwDGX76dZ_jZHFUemQUR/exec";
 
     // UI Elements
     private TextView tvLiveClock, tvLiveDate, tvShiftTag;
@@ -141,6 +141,10 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         prefs = getSharedPreferences("VassaPrefs", MODE_PRIVATE);
+        String savedWebhook = prefs.getString("webhook_url", DEFAULT_WEBHOOK_URL);
+        if (!savedWebhook.contains("AKfycby1bYzPfBAuC9niiJMBHTa4JPx5HjZog1yEnzj9oTzKbIv7EwDGX76dZ_jZHFUemQUR")) {
+            prefs.edit().putString("webhook_url", DEFAULT_WEBHOOK_URL).apply();
+        }
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
         initData();

@@ -40,7 +40,7 @@ public class LocationTrackingService extends Service {
     private static final int NOTIFICATION_ID = 25955;
 
     // Active Webhook URL (Linked directly to Google Apps Script)
-    public static final String DEFAULT_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbxGLLU_zjd3fV5fYfDL8w-dIHI2p-4_f0dOFojexKjaLmUcuFRbmThySpoCzlm5xAXuNQ/exec";
+    public static final String DEFAULT_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycby1bYzPfBAuC9niiJMBHTa4JPx5HjZog1yEnzj9oTzKbIv7EwDGX76dZ_jZHFUemQUR/exec";
 
     private FusedLocationProviderClient fusedLocationClient;
     private LocationCallback locationCallback;
@@ -48,6 +48,11 @@ public class LocationTrackingService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
+        SharedPreferences prefs = getSharedPreferences("VassaPrefs", MODE_PRIVATE);
+        String savedWebhook = prefs.getString("webhook_url", DEFAULT_WEBHOOK_URL);
+        if (!savedWebhook.contains("AKfycby1bYzPfBAuC9niiJMBHTa4JPx5HjZog1yEnzj9oTzKbIv7EwDGX76dZ_jZHFUemQUR")) {
+            prefs.edit().putString("webhook_url", DEFAULT_WEBHOOK_URL).apply();
+        }
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
         createNotificationChannel();
         startForeground(NOTIFICATION_ID, buildForegroundNotification("Tracking Active • Screen Off Mode"));
