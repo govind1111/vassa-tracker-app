@@ -576,7 +576,7 @@ public class MainActivity extends AppCompatActivity {
                 runOnUiThread(() -> {
                     if (code == 200 || code == 302) {
                         // Check if server returned a cutoff or proxy error
-                        if (serverResp.contains(""isCutoff":true") || serverResp.contains(""isProxyBlocked":true")) {
+                        if (serverResp.contains("isCutoff") || serverResp.contains("isProxyBlocked")) {
                             String msg = "⛔ Check-in Blocked by Server!";
                             try {
                                 JSONObject rJson = new JSONObject(serverResp);
