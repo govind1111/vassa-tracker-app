@@ -182,7 +182,15 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         checkDailyMidnightReset();
+        boolean hasCheckedIn = prefs.getBoolean("has_checked_in", false);
+        boolean hasCheckedOut = prefs.getBoolean("has_checked_out", false);
+        if (hasCheckedIn && !hasCheckedOut) {
+            startLocationService();
+        } else {
+            stopLocationService();
+        }
         updateUI();
+        syncLiveMetadataFromSheet(false);
     }
 
     // ==============================================================================
@@ -449,6 +457,52 @@ public class MainActivity extends AppCompatActivity {
         tvAdminSettings.setOnClickListener(v -> promptAdminSettings());
     }
 
+    private void reconcileStaffAttendanceFromCache(String empId, String empName) {
+        String cachedStaff = prefs.getString("cached_staff_json", null);
+        if (cachedStaff != null) {
+            try {
+                JSONArray arr = new JSONArray(cachedStaff);
+                for (int i = 0; i < arr.length(); i++) {
+                    JSONObject o = arr.getJSONObject(i);
+                    String id = o.optString("id", "");
+                    String name = o.optString("name", "");
+                    if ((!empId.isEmpty() && id.equalsIgnoreCase(empId)) || (!empName.isEmpty() && name.equalsIgnoreCase(empName))) {
+                        boolean hasIn = o.optBoolean("hasCheckedIn", false) || o.optBoolean("hasPunchedToday", false);
+                        boolean hasOut = o.optBoolean("hasCheckedOut", false);
+                        String inTime = o.optString("checkInTime", o.optString("punchTime", "-"));
+                        String outTime = o.optString("checkOutTime", "-");
+
+                        if (hasIn && hasOut) {
+                            prefs.edit()
+                                    .putBoolean("has_checked_in", true)
+                                    .putBoolean("has_checked_out", true)
+                                    .putString("checkin_time", inTime)
+                                    .putString("checkout_time", outTime)
+                                    .apply();
+                            stopLocationService();
+                        } else if (hasIn && !hasOut) {
+                            prefs.edit()
+                                    .putBoolean("has_checked_in", true)
+                                    .putBoolean("has_checked_out", false)
+                                    .putString("checkin_time", inTime)
+                                    .apply();
+                            startLocationService();
+                        } else {
+                            prefs.edit()
+                                    .putBoolean("has_checked_in", false)
+                                    .putBoolean("has_checked_out", false)
+                                    .putString("checkin_time", "-")
+                                    .putString("checkout_time", "-")
+                                    .apply();
+                            stopLocationService();
+                        }
+                        break;
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
+    }
+
     private void lockDeviceToStaff(StaffMember staff) {
         prefs.edit()
                 .putBoolean("is_device_locked", true)
@@ -458,8 +512,14 @@ public class MainActivity extends AppCompatActivity {
                 .putString("locked_emp_dept", staff.dept)
                 .apply();
 
+        // Immediately reconcile today's attendance state for this staff from cached sheet data!
+        reconcileStaffAttendanceFromCache(staff.id, staff.name);
+
         updateUI();
         Toast.makeText(this, "🔒 Device successfully locked to " + staff.name, Toast.LENGTH_SHORT).show();
+
+        // Immediately fetch latest live ground-truth from Google Sheet
+        syncLiveMetadataFromSheet(false);
     }
 
     private void promptAdminPinReset() {
@@ -539,36 +599,48 @@ public class MainActivity extends AppCompatActivity {
         boolean hasCheckedOut = prefs.getBoolean("has_checked_out", false);
         String checkinTime = prefs.getString("checkin_time", "-");
 
+        String shiftDisplay = prefs.getString("shift_display_text", "🕒 Shift: 10:00 AM — 07:00 PM");
+        if (tvShiftTag != null) {
+            tvShiftTag.setText(shiftDisplay);
+        }
+
         if (hasCheckedIn && !hasCheckedOut) {
-            // ON DUTY
+            // ON DUTY (Awaiting Check-Out)
             llBannerStatus.setVisibility(View.VISIBLE);
             llBannerStatus.setBackgroundResource(R.drawable.bg_radar_inside);
             tvBannerTitle.setText("🟢 Check-In Recorded (On Duty)");
             tvBannerTitle.setTextColor(0xFF047857);
             tvBannerTime.setText("🕒 Time: " + checkinTime + " (Present)");
-            tvBannerWarn.setText("⚡ Duty active hai. Kaam khatam hone par niche se Check-Out karein.");
-            tvBannerWarn.setVisibility(View.VISIBLE);
+            tvBannerWarn.setVisibility(View.GONE); // NIKAL DIYA (User Request)
 
             btnCheckIn.setVisibility(View.GONE);
             btnCheckOut.setVisibility(View.VISIBLE);
             btnCheckOut.setEnabled(true);
+            btnManualPing.setVisibility(View.VISIBLE);
+            tvPingStatus.setVisibility(View.VISIBLE);
         } else if (hasCheckedOut) {
-            // DAY COMPLETED
+            // DAY COMPLETED (Shift Completed - Both Check-In and Check-Out Done)
             llBannerStatus.setVisibility(View.VISIBLE);
             llBannerStatus.setBackgroundResource(R.drawable.bg_radar_locating);
             tvBannerTitle.setText("🏁 Shift Completed (Checked-Out)");
             tvBannerTitle.setTextColor(0xFF0369A1);
-            tvBannerTime.setText("🕒 Checked-Out today. Have a good evening!");
-            tvBannerWarn.setText("✅ Aaj ka din complete ho chuka hai. Agla check-in kal subah 06:00 AM open hoga.");
+            String checkoutTime = prefs.getString("checkout_time", "-");
+            tvBannerTime.setText("🕒 In: " + checkinTime + "  |  Out: " + checkoutTime);
+            tvBannerWarn.setText("✅ Aaj ka din complete ho chuka hai. Agla check-in kal subah open hoga.");
             tvBannerWarn.setVisibility(View.VISIBLE);
 
+            // BOTH BUTTONS OFF! (User Request)
             btnCheckIn.setVisibility(View.GONE);
             btnCheckOut.setVisibility(View.GONE);
+            btnManualPing.setVisibility(View.GONE);
+            tvPingStatus.setVisibility(View.GONE);
         } else {
-            // READY TO CHECK-IN
+            // READY TO CHECK-IN (Morning Shift Start)
             llBannerStatus.setVisibility(View.GONE);
             btnCheckIn.setVisibility(View.VISIBLE);
             btnCheckOut.setVisibility(View.GONE);
+            btnManualPing.setVisibility(View.GONE);
+            tvPingStatus.setVisibility(View.GONE);
         }
 
         calculateGeofenceDistance();
@@ -755,6 +827,50 @@ public class MainActivity extends AppCompatActivity {
 
                 int code = conn.getResponseCode();
                 final String finalEmpName = empName;
+
+                InputStream is = (code >= 200 && code < 300) ? conn.getInputStream() : conn.getErrorStream();
+                StringBuilder respSb = new StringBuilder();
+                if (is != null) {
+                    try (BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
+                        String l;
+                        while ((l = reader.readLine()) != null) {
+                            respSb.append(l);
+                        }
+                    }
+                }
+                String respStr = respSb.toString();
+                android.util.Log.i("MainActivity", "Server Punch Response (" + code + "): " + respStr);
+
+                JSONObject respObj = null;
+                try {
+                    respObj = new JSONObject(respStr);
+                } catch (Exception ignored) {}
+
+                if (respObj != null) {
+                    boolean isDup = respObj.optBoolean("isDuplicate", false) || "duplicate".equalsIgnoreCase(respObj.optString("status"));
+                    boolean isProxy = respObj.optBoolean("isProxyBlocked", false) || "proxy_blocked".equalsIgnoreCase(respObj.optString("status"));
+                    String serverMsg = respObj.optString("message", "");
+
+                    if (isProxy) {
+                        runOnUiThread(() -> Toast.makeText(MainActivity.this, "⛔ " + serverMsg, Toast.LENGTH_LONG).show());
+                        return;
+                    }
+
+                    if (isDup) {
+                        runOnUiThread(() -> {
+                            Toast.makeText(MainActivity.this, "⚠️ " + serverMsg, Toast.LENGTH_LONG).show();
+                            // Force sync from sheet to correct local button states
+                            syncLiveMetadataFromSheet(true);
+                        });
+                        return;
+                    }
+
+                    if ("error".equalsIgnoreCase(respObj.optString("status"))) {
+                        runOnUiThread(() -> Toast.makeText(MainActivity.this, "❌ " + serverMsg, Toast.LENGTH_LONG).show());
+                        return;
+                    }
+                }
+
                 if (code == 200 || code == 302) {
                     runOnUiThread(() -> {
                         String timeNow = new SimpleDateFormat("hh:mm a", Locale.getDefault()).format(new Date());
@@ -776,6 +892,7 @@ public class MainActivity extends AppCompatActivity {
                             stopLocationService();
                         }
                         updateUI();
+                        syncLiveMetadataFromSheet(false);
                     });
                 } else {
                     runOnUiThread(() -> Toast.makeText(MainActivity.this, "⚠️ Punch response HTTP " + code, Toast.LENGTH_LONG).show());
@@ -1080,7 +1197,8 @@ public class MainActivity extends AppCompatActivity {
                             .apply();
                 }
 
-                final String shiftText = (settingsObj != null) ? settingsObj.optString("shiftText", "🕒 Shift: 06:00 AM — 07:00 PM") : "🕒 Shift: 06:00 AM — 07:00 PM";
+                final String shiftText = (settingsObj != null && settingsObj.has("shiftText")) ? settingsObj.optString("shiftText") : prefs.getString("shift_display_text", "🕒 Shift: 10:00 AM — 07:00 PM");
+                prefs.edit().putString("shift_display_text", shiftText).apply();
 
                 runOnUiThread(() -> {
                     if (!newSites.isEmpty()) {
@@ -1109,6 +1227,7 @@ public class MainActivity extends AppCompatActivity {
                     if (tvShiftTag != null) {
                         tvShiftTag.setText(shiftText);
                     }
+                    updateUI();
 
                     // Refresh UI based on updated real-time Sheet state
                     updateUI();

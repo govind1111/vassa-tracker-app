@@ -127,6 +127,11 @@ public class LocationTrackingService extends Service {
             @Override
             public void onLocationResult(LocationResult locationResult) {
                 if (locationResult == null) return;
+                SharedPreferences p = getSharedPreferences("VassaPrefs", MODE_PRIVATE);
+                if (!p.getBoolean("has_checked_in", false) || p.getBoolean("has_checked_out", false)) {
+                    stopSelf();
+                    return;
+                }
                 for (Location location : locationResult.getLocations()) {
                     if (location != null) {
                         pushLocationToGoogleSheets(location, "GPS Provider Trigger");
@@ -160,6 +165,12 @@ public class LocationTrackingService extends Service {
         // Run immediately after 1 minute, then strictly every 5 minutes (300 seconds)
         scheduler.scheduleWithFixedDelay(() -> {
             try {
+                SharedPreferences p = getSharedPreferences("VassaPrefs", MODE_PRIVATE);
+                if (!p.getBoolean("has_checked_in", false) || p.getBoolean("has_checked_out", false)) {
+                    Log.i(TAG, "⛔ Stationary timer: Staff is not on active duty. Halting service.");
+                    stopSelf();
+                    return;
+                }
                 if (wakeLock != null) {
                     wakeLock.acquire(15000); // 15s wake lock to complete network request
                 }
@@ -196,10 +207,21 @@ public class LocationTrackingService extends Service {
         new Thread(() -> {
             try {
                 SharedPreferences prefs = getSharedPreferences("VassaPrefs", MODE_PRIVATE);
+                boolean hasCheckedIn = prefs.getBoolean("has_checked_in", false);
+                boolean hasCheckedOut = prefs.getBoolean("has_checked_out", false);
+
+                // STRICT RULE: Location sync MUST ONLY run while currently On Duty (Checked-In AND NOT Checked-Out)
+                if (!hasCheckedIn || hasCheckedOut) {
+                    Log.i(TAG, "⛔ [SYNC HALTED] Staff is not on active duty (hasCheckedIn=" + hasCheckedIn + ", hasCheckedOut=" + hasCheckedOut + "). Stopping background service.");
+                    stopSelf();
+                    return;
+                }
+
                 String empId = prefs.getString("locked_emp_id", prefs.getString("emp_id", ""));
                 String empName = prefs.getString("locked_emp_name", prefs.getString("emp_name", ""));
                 if (empId.isEmpty()) {
                     Log.i(TAG, "No registered staff on device, skipping background ping.");
+                    stopSelf();
                     return;
                 }
                 String webhookUrl = prefs.getString("webhook_url", DEFAULT_WEBHOOK_URL);
@@ -263,7 +285,15 @@ public class LocationTrackingService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        return START_STICKY; // Automatically recreate service if Android OS kills it
+        SharedPreferences prefs = getSharedPreferences("VassaPrefs", MODE_PRIVATE);
+        boolean hasCheckedIn = prefs.getBoolean("has_checked_in", false);
+        boolean hasCheckedOut = prefs.getBoolean("has_checked_out", false);
+        if (!hasCheckedIn || hasCheckedOut) {
+            Log.i(TAG, "LocationTrackingService onStartCommand: User not on active duty. Stopping immediately.");
+            stopSelf();
+            return START_NOT_STICKY;
+        }
+        return START_STICKY;
     }
 
     @Override
@@ -277,6 +307,11 @@ public class LocationTrackingService extends Service {
         }
         if (wakeLock != null && wakeLock.isHeld()) {
             try { wakeLock.release(); } catch (Exception ignored) {}
+        }
+        stopForeground(true);
+        NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        if (manager != null) {
+            manager.cancel(NOTIFICATION_ID);
         }
     }
 
