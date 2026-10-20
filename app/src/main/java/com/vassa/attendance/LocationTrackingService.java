@@ -196,8 +196,12 @@ public class LocationTrackingService extends Service {
         new Thread(() -> {
             try {
                 SharedPreferences prefs = getSharedPreferences("VassaPrefs", MODE_PRIVATE);
-                String empId = prefs.getString("locked_emp_id", prefs.getString("emp_id", "VP-004"));
-                String empName = prefs.getString("locked_emp_name", prefs.getString("emp_name", "Govind Gore"));
+                String empId = prefs.getString("locked_emp_id", prefs.getString("emp_id", ""));
+                String empName = prefs.getString("locked_emp_name", prefs.getString("emp_name", ""));
+                if (empId.isEmpty()) {
+                    Log.i(TAG, "No registered staff on device, skipping background ping.");
+                    return;
+                }
                 String webhookUrl = prefs.getString("webhook_url", DEFAULT_WEBHOOK_URL);
 
                 // Cache last coordinates for fallback

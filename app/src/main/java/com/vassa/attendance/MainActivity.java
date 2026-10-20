@@ -39,14 +39,13 @@ import org.json.JSONObject;
 import org.json.JSONArray;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
-
-
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -55,6 +54,12 @@ public class MainActivity extends AppCompatActivity {
 
     private static final int PERMISSION_REQUEST_CODE = 1001;
     public static final String MASTER_ADMIN_PIN = "25955";
+
+    // Shift Timings: Starts sharp at 06:00 AM (Check-in blocked before 6:00 AM & after 07:30 PM)
+    public static final int DEFAULT_SHIFT_START_HOUR = 6;  // 06:00 AM
+    public static final int DEFAULT_SHIFT_START_MIN = 0;   // 00 Mins
+    public static final int DEFAULT_CUTOFF_HOUR = 19;      // 07:00 PM (19:30)
+    public static final int DEFAULT_CUTOFF_MIN = 30;       // 30 Mins -> 07:30 PM Hard Cutoff
 
     // Active Google Apps Script Deployment URL
     public static final String DEFAULT_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycby1bYzPfBAuC9niiJMBHTa4JPx5HjZog1yEnzj9oTzKbIv7EwDGX76dZ_jZHFUemQUR/exec";
@@ -113,7 +118,10 @@ public class MainActivity extends AppCompatActivity {
         @NonNull
         @Override
         public String toString() {
-            return id + ": " + name + " (" + role + ")";
+            if (id == null || id.isEmpty()) {
+                return name; // Placeholder item: "-- Choose Your Name --"
+            }
+            return id + ": " + name + " (" + (role != null && !role.isEmpty() ? role : dept) + ")";
         }
     }
 
@@ -156,6 +164,7 @@ public class MainActivity extends AppCompatActivity {
         }
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
+        checkDailyMidnightReset();
         initData();
         bindViews();
         setupClock();
@@ -164,25 +173,101 @@ public class MainActivity extends AppCompatActivity {
 
         checkAndRequestPermissions();
         updateUI();
+
+        // Immediately sync live staff list and sites from Google Sheet
         syncLiveMetadataFromSheet(false);
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        checkDailyMidnightReset();
+        updateUI();
+    }
+
+    // ==============================================================================
+    // 1. AUTOMATIC DAILY MIDNIGHT RESET (REFRESH AT 12:00 AM FOR FRESH DAY)
+    // ==============================================================================
+    private void checkDailyMidnightReset() {
+        Date now = new Date();
+        String todayDate = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(now);
+        String lastSavedDate = prefs.getString("last_active_date", "");
+
+        if (lastSavedDate.isEmpty()) {
+            // First time running on this device
+            prefs.edit().putString("last_active_date", todayDate).apply();
+            return;
+        }
+
+        if (!todayDate.equals(lastSavedDate)) {
+            // A brand new day has begun (Midnight 12:00 AM passed)!
+            android.util.Log.i("MainActivity", "🌅 Midnight Reset: New day detected (" + todayDate + " vs " + lastSavedDate + "). Automatically resetting attendance states.");
+            prefs.edit()
+                    .putString("last_active_date", todayDate)
+                    .putBoolean("has_checked_in", false)
+                    .putBoolean("has_checked_out", false)
+                    .putString("checkin_time", "-")
+                    .putString("checkout_time", "-")
+                    .apply();
+
+            stopLocationService();
+            runOnUiThread(() -> {
+                updateUI();
+                syncLiveMetadataFromSheet(false);
+            });
+        }
+    }
+
+    // ==============================================================================
+    // 2. SHIFT TIMING RESTRICTIONS (06:00 AM START & EVENING CUTOFF)
+    // ==============================================================================
+    private boolean isBeforeShiftStart() {
+        Calendar cal = Calendar.getInstance();
+        int curHour = cal.get(Calendar.HOUR_OF_DAY);
+        int curMin = cal.get(Calendar.MINUTE);
+        int curMins = curHour * 60 + curMin;
+
+        int sHour = prefs.getInt("shift_start_hour", DEFAULT_SHIFT_START_HOUR);
+        int sMin = prefs.getInt("shift_start_min", DEFAULT_SHIFT_START_MIN);
+        int startMins = sHour * 60 + sMin;
+
+        return curMins < startMins;
+    }
+
+    private boolean isAfterEveningCutoff() {
+        Calendar cal = Calendar.getInstance();
+        int curHour = cal.get(Calendar.HOUR_OF_DAY);
+        int curMin = cal.get(Calendar.MINUTE);
+        int curMins = curHour * 60 + curMin;
+
+        int cHour = prefs.getInt("cutoff_hour", DEFAULT_CUTOFF_HOUR);
+        int cMin = prefs.getInt("cutoff_min", DEFAULT_CUTOFF_MIN);
+        int cutoffMins = cHour * 60 + cMin;
+
+        return curMins > cutoffMins;
+    }
+
+    // ==============================================================================
+    // 3. INITIALIZE DATA (NO HARDCODED STAFF - FRESH SYNC FROM SHEET)
+    // ==============================================================================
     private void initData() {
         staffList.clear();
+        staffList.add(new StaffMember("", "-- Choose Your Name --", "Required", ""));
+
+        // If previously cached staff exists from sheet, load it
         String cachedStaff = prefs.getString("cached_staff_json", null);
         if (cachedStaff != null) {
             try {
                 JSONArray arr = new JSONArray(cachedStaff);
                 for (int i = 0; i < arr.length(); i++) {
                     JSONObject o = arr.getJSONObject(i);
-                    staffList.add(new StaffMember(o.optString("id"), o.optString("name"), o.optString("role"), o.optString("dept")));
+                    String id = o.optString("id", "");
+                    String name = o.optString("name", "");
+                    if (!id.isEmpty() && !name.isEmpty()) {
+                        staffList.add(new StaffMember(id, name, o.optString("role"), o.optString("dept")));
+                    }
                 }
             } catch (Exception ignored) {}
-        }
-        if (staffList.isEmpty()) {
-            staffList.add(new StaffMember("VP-004", "Govind Gore", "Director / Founder", "Management"));
-            staffList.add(new StaffMember("VP-002", "Vaishnavi Rajguru", "HR Pre-Sale", "Office"));
-            staffList.add(new StaffMember("VP-003", "Savita Chavan", "Staff", "Office"));
         }
 
         sitesList.clear();
@@ -203,7 +288,7 @@ public class MainActivity extends AppCompatActivity {
             } catch (Exception ignored) {}
         }
         if (sitesList.isEmpty()) {
-            sitesList.add(new ProjectSite("SITE-01", "Golden City Center (Main Office)", 19.905984, 75.359430, 100f));
+            sitesList.add(new ProjectSite("SITE-01", "Golden City Center (Main Office)", 19.874668, 75.372983, 100f));
             sitesList.add(new ProjectSite("SITE-02", "Waluj Mahanagar-1", 19.888512, 75.465034, 100f));
             sitesList.add(new ProjectSite("SITE-03", "Waluj Mahanagar-2", 19.839045, 75.321078, 100f));
             sitesList.add(new ProjectSite("SITE-04", "Shendra MIDC - Shendra", 19.831567, 75.315023, 100f));
@@ -245,6 +330,7 @@ public class MainActivity extends AppCompatActivity {
         clockRunnable = new Runnable() {
             @Override
             public void run() {
+                checkDailyMidnightReset();
                 Date now = new Date();
                 String timeStr = new SimpleDateFormat("hh:mm:ss a", Locale.getDefault()).format(now);
                 String dateStr = new SimpleDateFormat("EEEE, dd MMMM yyyy", Locale.getDefault()).format(now);
@@ -273,13 +359,15 @@ public class MainActivity extends AppCompatActivity {
         );
         spLocation.setAdapter(siteAdapter);
 
-        // Staff Selection Listener
+        // Staff Selection Listener (DO NOT auto-lock on position 0!)
         spStaff.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                if (!prefs.getBoolean("is_device_locked", false)) {
+                if (position > 0 && !prefs.getBoolean("is_device_locked", false)) {
                     StaffMember selected = staffList.get(position);
-                    lockDeviceToStaff(selected);
+                    if (selected != null && selected.id != null && !selected.id.isEmpty()) {
+                        promptConfirmDeviceLock(selected);
+                    }
                 }
             }
 
@@ -299,6 +387,20 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    private void promptConfirmDeviceLock(StaffMember staff) {
+        new AlertDialog.Builder(this)
+                .setTitle("🔒 Confirm Device Registration")
+                .setMessage("Kya aap apna phone " + staff.name + " (" + staff.id + ") ke liye lock karna chahte hain?\n\nEk baar bind hone ke baad staff member name switch nahi kar sakte (Admin PIN required).")
+                .setPositiveButton("Yes, Lock My Phone", (dialog, which) -> {
+                    lockDeviceToStaff(staff);
+                })
+                .setNegativeButton("Cancel", (dialog, which) -> {
+                    spStaff.setSelection(0);
+                })
+                .setCancelable(false)
+                .show();
+    }
+
     private void setupListeners() {
         // 0. Radar Card Tap: Force Sync Sites & Staff from Google Sheet
         llRadarCard.setOnClickListener(v -> {
@@ -311,10 +413,27 @@ public class MainActivity extends AppCompatActivity {
 
         // 2. Check-In Button
         btnCheckIn.setOnClickListener(v -> {
+            boolean isLocked = prefs.getBoolean("is_device_locked", false);
+            if (!isLocked && spStaff.getSelectedItemPosition() <= 0) {
+                Toast.makeText(this, "⚠️ Kripya pehle dropdown se apna name select karein!", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            if (isBeforeShiftStart()) {
+                Toast.makeText(this, "⛔ Check-In Blocked: Office shift subah 06:00 AM se shuru hoti hai. 06:00 AM ke pehle check-in allowed nahi hai.", Toast.LENGTH_LONG).show();
+                return;
+            }
+
+            if (isAfterEveningCutoff()) {
+                Toast.makeText(this, "⛔ Check-In Blocked: Shift samapt ho chuki hai. Evening cutoff ke baad check-in strictly band hai.", Toast.LENGTH_LONG).show();
+                return;
+            }
+
             if (distanceToSite > 100f) {
                 Toast.makeText(this, "⛔ Check-In Blocked! You are " + Math.round(distanceToSite) + "m away. 100m geofence required.", Toast.LENGTH_LONG).show();
                 return;
             }
+
             recordAttendancePunch("Check-In");
         });
 
@@ -356,9 +475,18 @@ public class MainActivity extends AppCompatActivity {
         builder.setPositiveButton("Unlock", (dialog, which) -> {
             String enteredPin = input.getText().toString().trim();
             if (MASTER_ADMIN_PIN.equals(enteredPin)) {
-                prefs.edit().putBoolean("is_device_locked", false).apply();
+                prefs.edit()
+                        .putBoolean("is_device_locked", false)
+                        .putString("locked_emp_id", "")
+                        .putString("locked_emp_name", "")
+                        .putString("locked_emp_role", "")
+                        .putString("locked_emp_dept", "")
+                        .apply();
+                if (spStaff != null) {
+                    spStaff.setSelection(0);
+                }
                 updateUI();
-                Toast.makeText(this, "✅ Device successfully unlocked by Admin.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "✅ Device successfully unlocked by Admin. Choose fresh name.", Toast.LENGTH_SHORT).show();
             } else {
                 Toast.makeText(this, "❌ Galat Admin PIN! Access denied.", Toast.LENGTH_LONG).show();
             }
@@ -383,6 +511,7 @@ public class MainActivity extends AppCompatActivity {
             if (!newUrl.isEmpty()) {
                 prefs.edit().putString("webhook_url", newUrl).apply();
                 Toast.makeText(this, "✅ API URL Saved!", Toast.LENGTH_SHORT).show();
+                syncLiveMetadataFromSheet(false);
             }
         });
 
@@ -392,11 +521,11 @@ public class MainActivity extends AppCompatActivity {
 
     private void updateUI() {
         boolean isLocked = prefs.getBoolean("is_device_locked", false);
-        String empId = prefs.getString("locked_emp_id", "VP-004");
-        String empName = prefs.getString("locked_emp_name", "Govind Gore");
-        String empRole = prefs.getString("locked_emp_role", "Director / Founder");
+        String empId = prefs.getString("locked_emp_id", "");
+        String empName = prefs.getString("locked_emp_name", "");
+        String empRole = prefs.getString("locked_emp_role", "");
 
-        if (isLocked) {
+        if (isLocked && !empId.isEmpty()) {
             llProfileBox.setVisibility(View.VISIBLE);
             llStaffSelectGroup.setVisibility(View.GONE);
             tvProfileName.setText(empName);
@@ -430,7 +559,7 @@ public class MainActivity extends AppCompatActivity {
             tvBannerTitle.setText("🏁 Shift Completed (Checked-Out)");
             tvBannerTitle.setTextColor(0xFF0369A1);
             tvBannerTime.setText("🕒 Checked-Out today. Have a good evening!");
-            tvBannerWarn.setText("✅ Aaj ka din complete ho chuka hai. Agla check-in kal subah open hoga.");
+            tvBannerWarn.setText("✅ Aaj ka din complete ho chuka hai. Agla check-in kal subah 06:00 AM open hoga.");
             tvBannerWarn.setVisibility(View.VISIBLE);
 
             btnCheckIn.setVisibility(View.GONE);
@@ -449,6 +578,33 @@ public class MainActivity extends AppCompatActivity {
         if (spLocation.getSelectedItem() == null) return;
         ProjectSite site = (ProjectSite) spLocation.getSelectedItem();
 
+        boolean isLocked = prefs.getBoolean("is_device_locked", false);
+        boolean hasCheckedIn = prefs.getBoolean("has_checked_in", false);
+
+        // 1. If not checked in, enforce Shift Timing Restrictions first
+        if (!hasCheckedIn) {
+            if (!isLocked && spStaff.getSelectedItemPosition() <= 0) {
+                btnCheckIn.setEnabled(false);
+                btnCheckIn.setBackgroundResource(R.drawable.bg_btn_disabled);
+                btnCheckIn.setText("🔒 Select Your Name to Check-In");
+                return;
+            }
+
+            if (isBeforeShiftStart()) {
+                btnCheckIn.setEnabled(false);
+                btnCheckIn.setBackgroundResource(R.drawable.bg_btn_disabled);
+                btnCheckIn.setText("⛔ Shift Starts at 06:00 AM");
+                return;
+            }
+
+            if (isAfterEveningCutoff()) {
+                btnCheckIn.setEnabled(false);
+                btnCheckIn.setBackgroundResource(R.drawable.bg_btn_disabled);
+                btnCheckIn.setText("⛔ Shift Over (Closed at 07:30 PM)");
+                return;
+            }
+        }
+
         if (currentLat == 0.0 && currentLon == 0.0) {
             llRadarCard.setBackgroundResource(R.drawable.bg_radar_locating);
             tvRadarIcon.setText("📡");
@@ -457,17 +613,17 @@ public class MainActivity extends AppCompatActivity {
             tvRadarDesc.setText("Checking 100m geofence radius");
             tvRadarDesc.setTextColor(0xFF0284C7);
 
-            btnCheckIn.setEnabled(false);
-            btnCheckIn.setBackgroundResource(R.drawable.bg_btn_disabled);
-            btnCheckIn.setText("🔒 Check-In Blocked (Acquiring GPS)");
+            if (!hasCheckedIn) {
+                btnCheckIn.setEnabled(false);
+                btnCheckIn.setBackgroundResource(R.drawable.bg_btn_disabled);
+                btnCheckIn.setText("🔒 Check-In Blocked (Acquiring GPS)");
+            }
             return;
         }
 
         float[] results = new float[1];
         Location.distanceBetween(currentLat, currentLon, site.lat, site.lon, results);
         distanceToSite = results[0];
-
-        boolean hasCheckedIn = prefs.getBoolean("has_checked_in", false);
 
         if (distanceToSite <= site.radius) {
             // INSIDE 100m GEOFENCE
@@ -530,8 +686,34 @@ public class MainActivity extends AppCompatActivity {
     private void dispatchPunchHttpRequest(String punchType) {
         new Thread(() -> {
             try {
-                String empId = prefs.getString("locked_emp_id", "VP-004");
-                String empName = prefs.getString("locked_emp_name", "Govind Gore");
+                String empId = prefs.getString("locked_emp_id", "");
+                String empName = prefs.getString("locked_emp_name", "");
+
+                if (empId.isEmpty()) {
+                    int pos = spStaff.getSelectedItemPosition();
+                    if (pos > 0 && pos < staffList.size()) {
+                        StaffMember sm = staffList.get(pos);
+                        empId = sm.id;
+                        empName = sm.name;
+                    }
+                }
+
+                if (empId.isEmpty()) {
+                    runOnUiThread(() -> Toast.makeText(MainActivity.this, "⚠️ Kripya dropdown se apna name select karein!", Toast.LENGTH_LONG).show());
+                    return;
+                }
+
+                if ("Check-In".equals(punchType)) {
+                    if (isBeforeShiftStart()) {
+                        runOnUiThread(() -> Toast.makeText(MainActivity.this, "⛔ Check-In Blocked: Office shift subah 06:00 AM se shuru hoti hai.", Toast.LENGTH_LONG).show());
+                        return;
+                    }
+                    if (isAfterEveningCutoff()) {
+                        runOnUiThread(() -> Toast.makeText(MainActivity.this, "⛔ Check-In Blocked: Evening cutoff ke baad check-in strictly band hai.", Toast.LENGTH_LONG).show());
+                        return;
+                    }
+                }
+
                 String webhookUrl = prefs.getString("webhook_url", DEFAULT_WEBHOOK_URL);
 
                 ProjectSite site = (ProjectSite) spLocation.getSelectedItem();
@@ -567,64 +749,40 @@ public class MainActivity extends AppCompatActivity {
                 conn.setReadTimeout(15000);
 
                 try (OutputStream os = conn.getOutputStream()) {
-                    byte[] input = json.toString().getBytes("utf-8");
+                    byte[] input = json.toString().getBytes(StandardCharsets.UTF_8);
                     os.write(input, 0, input.length);
                 }
 
                 int code = conn.getResponseCode();
-                String timeNow = new SimpleDateFormat("hh:mm a", Locale.getDefault()).format(new Date());
-
-                String respBody = "";
-                try {
-                    java.io.InputStream is = (code >= 200 && code < 400) ? conn.getInputStream() : conn.getErrorStream();
-                    if (is != null) {
-                        BufferedReader br = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
-                        StringBuilder sb = new StringBuilder();
-                        String line;
-                        while ((line = br.readLine()) != null) sb.append(line);
-                        respBody = sb.toString();
-                    }
-                } catch (Exception ignored) {}
-
-                final String serverResp = respBody;
-
-                runOnUiThread(() -> {
-                    if (code == 200 || code == 302) {
-                        // Check if server returned a cutoff or proxy error
-                        if (serverResp.contains("isCutoff") || serverResp.contains("isProxyBlocked")) {
-                            String msg = "⛔ Check-in Blocked by Server!";
-                            try {
-                                JSONObject rJson = new JSONObject(serverResp);
-                                msg = rJson.optString("message", msg);
-                            } catch (Exception ignored) {}
-                            Toast.makeText(this, msg, Toast.LENGTH_LONG).show();
-                            return;
-                        }
-
-                        if ("Check-In".equalsIgnoreCase(punchType)) {
+                final String finalEmpName = empName;
+                if (code == 200 || code == 302) {
+                    runOnUiThread(() -> {
+                        String timeNow = new SimpleDateFormat("hh:mm a", Locale.getDefault()).format(new Date());
+                        if ("Check-In".equals(punchType)) {
                             prefs.edit()
                                     .putBoolean("has_checked_in", true)
                                     .putBoolean("has_checked_out", false)
                                     .putString("checkin_time", timeNow)
                                     .apply();
+                            Toast.makeText(MainActivity.this, "✅ Check-In Recorded for " + finalEmpName + "!", Toast.LENGTH_SHORT).show();
                             startLocationService();
-                            Toast.makeText(this, "✅ Check-In Recorded in Attendance Log at " + timeNow + "!", Toast.LENGTH_LONG).show();
                         } else {
                             prefs.edit()
-                                    .putBoolean("has_checked_in", false)
+                                    .putBoolean("has_checked_in", true)
                                     .putBoolean("has_checked_out", true)
                                     .putString("checkout_time", timeNow)
                                     .apply();
+                            Toast.makeText(MainActivity.this, "🏁 Check-Out Recorded! Have a good evening.", Toast.LENGTH_SHORT).show();
                             stopLocationService();
-                            Toast.makeText(this, "🏁 Check-Out Recorded in Attendance Log at " + timeNow + "!", Toast.LENGTH_LONG).show();
                         }
                         updateUI();
-                    } else {
-                        Toast.makeText(this, "⚠️ Punch submitted (HTTP " + code + ")", Toast.LENGTH_SHORT).show();
-                    }
-                });
+                    });
+                } else {
+                    runOnUiThread(() -> Toast.makeText(MainActivity.this, "⚠️ Punch response HTTP " + code, Toast.LENGTH_LONG).show());
+                }
+                conn.disconnect();
             } catch (Exception e) {
-                runOnUiThread(() -> Toast.makeText(this, "❌ Error saving punch: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+                runOnUiThread(() -> Toast.makeText(MainActivity.this, "❌ Error saving punch: " + e.getMessage(), Toast.LENGTH_LONG).show());
             }
         }).start();
     }
@@ -635,11 +793,14 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
+        String empId = prefs.getString("locked_emp_id", "");
+        if (empId.isEmpty()) {
+            Toast.makeText(this, "⚠️ Kripya pehle apna name select karke lock karein!", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         btnManualPing.setEnabled(false);
-        btnManualPing.setText("⏳ PINGING LOCATION...");
-        tvPingStatus.setText("📡 Acquiring high-accuracy GPS coordinates...");
-        // Ensure continuous 5-minute background auto-sync service is running!
-        startLocationService();
+        tvPingStatus.setText("📡 Acquiring high-accuracy GPS for ping...");
 
         try {
             fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null)
@@ -649,139 +810,132 @@ public class MainActivity extends AppCompatActivity {
                             currentLon = location.getLongitude();
                             currentAccuracy = location.getAccuracy();
                             calculateGeofenceDistance();
-                            dispatchTelemetryPing();
+                            dispatchManualPingHttpRequest(location);
                         } else {
-                            dispatchTelemetryPing();
+                            tvPingStatus.setText("❌ Failed to get accurate GPS fix");
+                            btnManualPing.setEnabled(true);
                         }
                     })
-                    .addOnFailureListener(this, e -> dispatchTelemetryPing());
-        } catch (SecurityException e) {
+                    .addOnFailureListener(this, e -> {
+                        tvPingStatus.setText("❌ GPS fix error: " + e.getMessage());
+                        btnManualPing.setEnabled(true);
+                    });
+        } catch (SecurityException se) {
+            tvPingStatus.setText("❌ Location permission missing");
             btnManualPing.setEnabled(true);
-            tvPingStatus.setText("Location permission missing");
         }
     }
 
-    private void dispatchTelemetryPing() {
+    private void dispatchManualPingHttpRequest(Location location) {
         new Thread(() -> {
             try {
-                String empId = prefs.getString("locked_emp_id", "VP-004");
-                String empName = prefs.getString("locked_emp_name", "Govind Gore");
+                String empId = prefs.getString("locked_emp_id", "");
+                String empName = prefs.getString("locked_emp_name", "");
                 String webhookUrl = prefs.getString("webhook_url", DEFAULT_WEBHOOK_URL);
 
                 ProjectSite site = (ProjectSite) spLocation.getSelectedItem();
-                String siteName = (site != null) ? site.name : "Golden City Center (Main Office)";
+                String siteName = (site != null) ? site.name : "Field Duty / On Route";
 
-                int batteryLevel = getBatteryLevel();
+                BatteryManager bm = (BatteryManager) getSystemService(BATTERY_SERVICE);
+                int batteryPct = (bm != null) ? bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY) : -1;
 
                 JSONObject json = new JSONObject();
                 json.put("action", "live_ping");
                 json.put("empId", empId);
                 json.put("empName", empName);
-                json.put("lat", currentLat);
-                json.put("lon", currentLon);
-                json.put("accuracy", "±" + Math.round(currentAccuracy) + "m");
+                json.put("lat", location.getLatitude());
+                json.put("lon", location.getLongitude());
+                json.put("accuracy", "±" + Math.round(location.getAccuracy()) + "m");
                 json.put("targetSiteName", siteName);
                 json.put("distanceMeters", Math.round(distanceToSite));
-                json.put("battery", batteryLevel + "%");
-                json.put("remarks", "Manual User Location Ping (White Dashboard App)");
+                json.put("battery", batteryPct > 0 ? (batteryPct + "%") : "-");
+                json.put("remarks", "Manual User Location Ping (Native App)");
 
                 URL url = new URL(webhookUrl);
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("POST");
                 conn.setRequestProperty("Content-Type", "application/json; utf-8");
                 conn.setDoOutput(true);
-                conn.setConnectTimeout(12000);
-                conn.setReadTimeout(12000);
+                conn.setConnectTimeout(15000);
+                conn.setReadTimeout(15000);
 
                 try (OutputStream os = conn.getOutputStream()) {
-                    byte[] input = json.toString().getBytes("utf-8");
+                    byte[] input = json.toString().getBytes(StandardCharsets.UTF_8);
                     os.write(input, 0, input.length);
                 }
 
                 int code = conn.getResponseCode();
-                String timeNow = new SimpleDateFormat("hh:mm:ss a", Locale.getDefault()).format(new Date());
-
                 runOnUiThread(() -> {
                     btnManualPing.setEnabled(true);
-                    btnManualPing.setText("📍 PING / MANUAL LOCATION SYNC");
                     if (code == 200 || code == 302) {
+                        String timeNow = new SimpleDateFormat("hh:mm:ss a", Locale.getDefault()).format(new Date());
                         tvPingStatus.setText("🟢 Location synced with Google Sheet (" + timeNow + ")");
-                        Toast.makeText(this, "✅ Live Location Ping Sent! Saved in Live_Tracking tab.", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(MainActivity.this, "✅ Live location coordinates pushed to Live_Tracking sheet!", Toast.LENGTH_SHORT).show();
                     } else {
-                        tvPingStatus.setText("⚠️ Synced (HTTP " + code + ")");
+                        tvPingStatus.setText("⚠️ Server returned HTTP " + code);
                     }
                 });
+                conn.disconnect();
             } catch (Exception e) {
                 runOnUiThread(() -> {
                     btnManualPing.setEnabled(true);
-                    btnManualPing.setText("📍 PING / MANUAL LOCATION SYNC");
-                    tvPingStatus.setText("⚠️ Ping sync error: " + e.getMessage());
+                    tvPingStatus.setText("❌ Ping sync failed: " + e.getMessage());
                 });
             }
         }).start();
     }
 
-    private int getBatteryLevel() {
-        BatteryManager bm = (BatteryManager) getSystemService(Context.BATTERY_SERVICE);
-        if (bm != null) {
-            return bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY);
-        }
-        return 100;
-    }
-
     private void startLocationService() {
-        Intent intent = new Intent(this, LocationTrackingService.class);
+        Intent serviceIntent = new Intent(this, LocationTrackingService.class);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(intent);
+            ContextCompat.startForegroundService(this, serviceIntent);
         } else {
-            startService(intent);
+            startService(serviceIntent);
         }
     }
 
     private void stopLocationService() {
-        Intent intent = new Intent(this, LocationTrackingService.class);
-        stopService(intent);
+        Intent serviceIntent = new Intent(this, LocationTrackingService.class);
+        stopService(serviceIntent);
     }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-        startContinuousLocationUpdates();
-        syncLiveMetadataFromSheet(false);
-        if (prefs.getBoolean("has_checked_in", false)) {
-            startLocationService();
+    private boolean hasLocationPermissions() {
+        return ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private void requestLocationPermissions() {
+        ActivityCompat.requestPermissions(
+                this,
+                new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION},
+                PERMISSION_REQUEST_CODE
+        );
+    }
+
+    private void checkAndRequestPermissions() {
+        if (!hasLocationPermissions()) {
+            requestLocationPermissions();
+        } else {
+            startLiveLocationUpdates();
         }
-        sheetPollHandler.removeCallbacks(sheetPollRunnable);
-        sheetPollHandler.postDelayed(sheetPollRunnable, 15000);
-    }
 
-    @Override
-    protected void onPause() {
-        super.onPause();
-        stopContinuousLocationUpdates();
-        sheetPollHandler.removeCallbacks(sheetPollRunnable);
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        if (clockHandler != null && clockRunnable != null) {
-            clockHandler.removeCallbacks(clockRunnable);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.POST_NOTIFICATIONS}, 1002);
+            }
         }
     }
 
-    private void startContinuousLocationUpdates() {
-        if (!hasLocationPermissions()) return;
-
-        LocationRequest locationRequest = new LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 4000)
-                .setMinUpdateIntervalMillis(2000)
+    private void startLiveLocationUpdates() {
+        LocationRequest locationRequest = new LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 5000)
+                .setMinUpdateIntervalMillis(3000)
+                .setMinUpdateDistanceMeters(2f)
                 .build();
 
         locationCallback = new LocationCallback() {
             @Override
             public void onLocationResult(@NonNull LocationResult locationResult) {
-                if (locationResult.getLastLocation() != null) {
-                    Location loc = locationResult.getLastLocation();
+                Location loc = locationResult.getLastLocation();
+                if (loc != null) {
                     currentLat = loc.getLatitude();
                     currentLon = loc.getLongitude();
                     currentAccuracy = loc.getAccuracy();
@@ -790,92 +944,36 @@ public class MainActivity extends AppCompatActivity {
             }
         };
 
-        try {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper());
-        } catch (SecurityException ignored) {}
-    }
-
-    private void stopContinuousLocationUpdates() {
-        if (fusedLocationClient != null && locationCallback != null) {
-            fusedLocationClient.removeLocationUpdates(locationCallback);
         }
-    }
-
-    private boolean hasLocationPermissions() {
-        boolean fine = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
-        boolean coarse = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED;
-        return fine && coarse;
-    }
-
-    private void checkAndRequestPermissions() {
-        if (!hasLocationPermissions()) {
-            requestLocationPermissions();
-        }
-        requestBatteryOptimizationExemption();
-    }
-
-    private void requestBatteryOptimizationExemption() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            android.os.PowerManager pm = (android.os.PowerManager) getSystemService(Context.POWER_SERVICE);
-            if (pm != null && !pm.isIgnoringBatteryOptimizations(getPackageName())) {
-                try {
-                    Intent intent = new Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
-                    intent.setData(android.net.Uri.parse("package:" + getPackageName()));
-                    startActivity(intent);
-                } catch (Exception ignored) {}
-            }
-        }
-    }
-
-    private void requestLocationPermissions() {
-        ActivityCompat.requestPermissions(
-                this,
-                new String[]{
-                        Manifest.permission.ACCESS_FINE_LOCATION,
-                        Manifest.permission.ACCESS_COARSE_LOCATION,
-                        Manifest.permission.POST_NOTIFICATIONS
-                },
-                PERMISSION_REQUEST_CODE
-        );
     }
 
     @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == PERMISSION_REQUEST_CODE) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_BACKGROUND_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                        ActivityCompat.requestPermissions(
-                                this,
-                                new String[]{Manifest.permission.ACCESS_BACKGROUND_LOCATION},
-                                1002
-                        );
-                    }
-                }
-                startContinuousLocationUpdates();
-                Toast.makeText(this, "✅ GPS Permissions Granted!", Toast.LENGTH_SHORT).show();
-            } else {
-                Toast.makeText(this, "⚠️ Location permission is required for attendance.", Toast.LENGTH_LONG).show();
-            }
+    protected void onDestroy() {
+        super.onDestroy();
+        if (fusedLocationClient != null && locationCallback != null) {
+            fusedLocationClient.removeLocationUpdates(locationCallback);
+        }
+        if (clockHandler != null && clockRunnable != null) {
+            clockHandler.removeCallbacks(clockRunnable);
+        }
+        if (sheetPollHandler != null && sheetPollRunnable != null) {
+            sheetPollHandler.removeCallbacks(sheetPollRunnable);
         }
     }
 
-    // =========================================================================
-    // DYNAMIC AUTO-SYNC: Fetch latest Site_Master coordinates & Staff from Sheet
-    // =========================================================================
+    // ==============================================================================
+    // 4. DYNAMIC LIVE GOOGLE SHEET DATA SYNC (FRESH STAFF_MASTER & SITE_MASTER)
+    // ==============================================================================
     private void syncLiveMetadataFromSheet(boolean isManual) {
         new Thread(() -> {
             try {
                 String webhookUrl = prefs.getString("webhook_url", DEFAULT_WEBHOOK_URL);
-                String fetchUrl = webhookUrl + (webhookUrl.contains("?") ? "&" : "?") + "api=true";
-                String jsonStr = httpGetWithRedirects(fetchUrl);
-                if (jsonStr == null || jsonStr.trim().isEmpty()) {
-                    if (isManual) {
-                        runOnUiThread(() -> Toast.makeText(this, "⚠️ Empty response from Google Sheet", Toast.LENGTH_SHORT).show());
-                    }
-                    return;
-                }
+                String getUrl = webhookUrl + (webhookUrl.contains("?") ? "&" : "?") + "api=true&_ts=" + System.currentTimeMillis();
+
+                String jsonStr = httpGetWithRedirects(getUrl);
+                if (jsonStr == null || jsonStr.isEmpty()) return;
 
                 JSONObject root = new JSONObject(jsonStr);
                 JSONArray sitesArr = root.optJSONArray("sites");
@@ -896,48 +994,50 @@ public class MainActivity extends AppCompatActivity {
                     prefs.edit().putString("cached_sites_json", sitesArr.toString()).apply();
                 }
 
+                // Fresh staff list starting with clean placeholder
                 List<StaffMember> newStaff = new ArrayList<>();
+                newStaff.add(new StaffMember("", "-- Choose Your Name --", "Required", ""));
+
                 boolean foundMyAttendanceInSheet = false;
                 boolean sheetHasCheckedIn = false;
                 boolean sheetHasCheckedOut = false;
                 String sheetCheckInTime = "-";
                 String sheetCheckOutTime = "-";
 
-                String myEmpId = prefs.getString("locked_emp_id", "VP-004");
-                String myEmpName = prefs.getString("locked_emp_name", "Govind Gore");
+                String myEmpId = prefs.getString("locked_emp_id", "");
+                String myEmpName = prefs.getString("locked_emp_name", "");
 
                 if (staffArr != null && staffArr.length() > 0) {
                     for (int j = 0; j < staffArr.length(); j++) {
                         JSONObject stObj = staffArr.getJSONObject(j);
-                        String stId = stObj.optString("id", "VP-" + (j + 1));
-                        String stName = stObj.optString("name", "Staff");
-                        String stRole = stObj.optString("role", "Staff");
-                        String stDept = stObj.optString("dept", "Office");
-                        newStaff.add(new StaffMember(stId, stName, stRole, stDept));
+                        String stId = stObj.optString("id", "");
+                        String stName = stObj.optString("name", "");
+                        String stRole = stObj.optString("role", "");
+                        String stDept = stObj.optString("dept", "");
 
-                        // Reconcile real-time today attendance status for current logged-in user
-                        if (stId.equalsIgnoreCase(myEmpId) || stName.equalsIgnoreCase(myEmpName)) {
-                            foundMyAttendanceInSheet = true;
-                            sheetHasCheckedIn = stObj.optBoolean("hasCheckedIn", false) || stObj.optBoolean("hasPunchedToday", false);
-                            sheetHasCheckedOut = stObj.optBoolean("hasCheckedOut", false);
-                            sheetCheckInTime = stObj.optString("checkInTime", stObj.optString("punchTime", "-"));
-                            sheetCheckOutTime = stObj.optString("checkOutTime", "-");
+                        if (!stId.isEmpty() && !stName.isEmpty()) {
+                            newStaff.add(new StaffMember(stId, stName, stRole, stDept));
+
+                            // Reconcile real-time today attendance status for current logged-in user
+                            if (!myEmpId.isEmpty() && (stId.equalsIgnoreCase(myEmpId) || stName.equalsIgnoreCase(myEmpName))) {
+                                foundMyAttendanceInSheet = true;
+                                sheetHasCheckedIn = stObj.optBoolean("hasCheckedIn", false) || stObj.optBoolean("hasPunchedToday", false);
+                                sheetHasCheckedOut = stObj.optBoolean("hasCheckedOut", false);
+                                sheetCheckInTime = stObj.optString("checkInTime", stObj.optString("punchTime", "-"));
+                                sheetCheckOutTime = stObj.optString("checkOutTime", "-");
+                            }
                         }
                     }
                     prefs.edit().putString("cached_staff_json", staffArr.toString()).apply();
                 }
 
-                // =========================================================================
-                // REAL-TIME GROUND TRUTH RECONCILIATION WITH GOOGLE SHEET:
-                // If entries were deleted in Google Sheet (or day was reset):
-                // Reset Android local state immediately to 'Ready to Check-In'!
-                // =========================================================================
+                // If user is locked, ground truth reconcile with Google Sheet
                 if (foundMyAttendanceInSheet) {
                     boolean localCheckedIn = prefs.getBoolean("has_checked_in", false);
                     boolean localCheckedOut = prefs.getBoolean("has_checked_out", false);
 
                     if (!sheetHasCheckedIn && !sheetHasCheckedOut) {
-                        // Google Sheet has NO punches today! (e.g. Govind ji deleted rows in Sheet)
+                        // Google Sheet has NO punches today (e.g. rows deleted or midnight reset)
                         if (localCheckedIn || localCheckedOut) {
                             android.util.Log.i("MainActivity", "🔄 Realtime Sheet Sync: Sheet has no punch records today! Resetting app to Check-In Ready.");
                             prefs.edit()
@@ -967,7 +1067,20 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
 
-                final String shiftText = (settingsObj != null) ? settingsObj.optString("shiftText", null) : null;
+                if (settingsObj != null) {
+                    int sHour = settingsObj.optInt("startHour", DEFAULT_SHIFT_START_HOUR);
+                    int sMin = settingsObj.optInt("startMin", DEFAULT_SHIFT_START_MIN);
+                    int cHour = settingsObj.optInt("cutoffHour", DEFAULT_CUTOFF_HOUR);
+                    int cMin = settingsObj.optInt("cutoffMin", DEFAULT_CUTOFF_MIN);
+                    prefs.edit()
+                            .putInt("shift_start_hour", sHour)
+                            .putInt("shift_start_min", sMin)
+                            .putInt("cutoff_hour", cHour)
+                            .putInt("cutoff_min", cMin)
+                            .apply();
+                }
+
+                final String shiftText = (settingsObj != null) ? settingsObj.optString("shiftText", "🕒 Shift: 06:00 AM — 07:00 PM") : "🕒 Shift: 06:00 AM — 07:00 PM";
 
                 runOnUiThread(() -> {
                     if (!newSites.isEmpty()) {
@@ -983,19 +1096,17 @@ public class MainActivity extends AppCompatActivity {
                         calculateGeofenceDistance();
                     }
 
-                    if (!newStaff.isEmpty() && !prefs.getBoolean("is_device_locked", false)) {
-                        int prevStaffPos = spStaff.getSelectedItemPosition();
+                    // Update staff dropdown from sheet only if device is not locked
+                    if (newStaff.size() > 1 && !prefs.getBoolean("is_device_locked", false)) {
                         staffList.clear();
                         staffList.addAll(newStaff);
                         if (staffAdapter != null) {
                             staffAdapter.notifyDataSetChanged();
-                            if (prevStaffPos >= 0 && prevStaffPos < staffList.size()) {
-                                spStaff.setSelection(prevStaffPos);
-                            }
+                            spStaff.setSelection(0); // Show "-- Choose Your Name --"
                         }
                     }
 
-                    if (shiftText != null && !shiftText.isEmpty() && tvShiftTag != null) {
+                    if (tvShiftTag != null) {
                         tvShiftTag.setText(shiftText);
                     }
 
@@ -1003,7 +1114,7 @@ public class MainActivity extends AppCompatActivity {
                     updateUI();
 
                     if (isManual) {
-                        Toast.makeText(this, "✅ Synced with Google Sheet! (" + sitesList.size() + " Sites)", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, "✅ Synced with Google Sheet! (" + (staffList.size() - 1) + " Staff Members)", Toast.LENGTH_SHORT).show();
                     }
                 });
             } catch (Exception e) {
