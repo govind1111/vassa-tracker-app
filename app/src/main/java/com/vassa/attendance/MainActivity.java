@@ -27,6 +27,12 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import android.net.Uri;
+import android.os.Environment;
+import androidx.core.content.FileProvider;
+import java.io.File;
+import java.io.FileOutputStream;
+
 
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
@@ -63,6 +69,11 @@ public class MainActivity extends AppCompatActivity {
     public static final int DEFAULT_CUTOFF_MIN = 30;       // 30 Mins -> 07:30 PM Hard Cutoff
 
     // Active Google Apps Script Deployment URL
+        // GitHub / Remote Version Auto-Update Endpoint
+    public static final String DEFAULT_GITHUB_UPDATE_URL = "https://raw.githubusercontent.com/govind1111/vassa-tracker-app/main/version.json";
+    public static final int CURRENT_APP_VERSION_CODE = 2; // Incremented for Auto-Updater Release
+    public static final String CURRENT_APP_VERSION_NAME = "2.0.0";
+
     public static final String DEFAULT_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycby1bYzPfBAuC9niiJMBHTa4JPx5HjZog1yEnzj9oTzKbIv7EwDGX76dZ_jZHFUemQUR/exec";
 
     // UI Elements
@@ -98,6 +109,7 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void run() {
             syncLiveMetadataFromSheet(false);
+        checkForAppUpdate(false);
             sheetPollHandler.postDelayed(this, 15000); // Auto-reconcile with Google Sheet every 15s
         }
     };
@@ -177,6 +189,7 @@ public class MainActivity extends AppCompatActivity {
 
         // Immediately sync live staff list and sites from Google Sheet
         syncLiveMetadataFromSheet(false);
+        checkForAppUpdate(false);
     }
 
     @Override
@@ -192,6 +205,7 @@ public class MainActivity extends AppCompatActivity {
         }
         updateUI();
         syncLiveMetadataFromSheet(false);
+        checkForAppUpdate(false);
     }
 
     // ==============================================================================
@@ -223,6 +237,7 @@ public class MainActivity extends AppCompatActivity {
             runOnUiThread(() -> {
                 updateUI();
                 syncLiveMetadataFromSheet(false);
+        checkForAppUpdate(false);
             });
         }
     }
@@ -521,6 +536,7 @@ public class MainActivity extends AppCompatActivity {
 
         // Immediately fetch latest live ground-truth from Google Sheet
         syncLiveMetadataFromSheet(false);
+        checkForAppUpdate(false);
     }
 
     private void promptAdminPinReset() {
@@ -573,6 +589,7 @@ public class MainActivity extends AppCompatActivity {
                 prefs.edit().putString("webhook_url", newUrl).apply();
                 Toast.makeText(this, "✅ API URL Saved!", Toast.LENGTH_SHORT).show();
                 syncLiveMetadataFromSheet(false);
+        checkForAppUpdate(false);
             }
         });
 
@@ -894,6 +911,7 @@ public class MainActivity extends AppCompatActivity {
                         }
                         updateUI();
                         syncLiveMetadataFromSheet(false);
+        checkForAppUpdate(false);
                     });
                 } else {
                     runOnUiThread(() -> Toast.makeText(MainActivity.this, "⚠️ Punch response HTTP " + code, Toast.LENGTH_LONG).show());
@@ -1286,4 +1304,183 @@ public class MainActivity extends AppCompatActivity {
         }
         return null;
     }
+
+    // ==============================================================================
+    // IN-APP AUTO-UPDATE ENGINE (GITHUB VERSION CHECKER & APK INSTALLER)
+    // ==============================================================================
+    public void checkForAppUpdate(final boolean isManual) {
+        new Thread(() -> {
+            try {
+                String updateUrl = prefs.getString("github_update_url", DEFAULT_GITHUB_UPDATE_URL);
+                String jsonStr = httpGetWithRedirects(updateUrl);
+
+                if (jsonStr == null || jsonStr.trim().isEmpty()) {
+                    String cachedSettings = prefs.getString("cached_sheet_settings", null);
+                    if (cachedSettings != null) {
+                        JSONObject sObj = new JSONObject(cachedSettings);
+                        if (sObj.has("versionCode")) {
+                            jsonStr = cachedSettings;
+                        }
+                    }
+                }
+
+                if (jsonStr == null || jsonStr.trim().isEmpty()) {
+                    if (isManual) {
+                        runOnUiThread(() -> Toast.makeText(this, "⚠️ Update server unreachable. Please verify GitHub URL.", Toast.LENGTH_SHORT).show());
+                    }
+                    return;
+                }
+
+                JSONObject obj = new JSONObject(jsonStr);
+                int remoteVersionCode = obj.optInt("versionCode", obj.optInt("latestVersion", 1));
+                String remoteVersionName = obj.optString("versionName", "2.0.0");
+                String apkUrl = obj.optString("apkUrl", obj.optString("downloadUrl", ""));
+                boolean forceUpdate = obj.optBoolean("forceUpdate", false);
+                String releaseNotes = obj.optString("releaseNotes", obj.optString("message", "वास्सा प्रॉपर्टीज ॲपचे नवीन अपडेट उपलब्ध आहे."));
+
+                if (remoteVersionCode > CURRENT_APP_VERSION_CODE && apkUrl != null && !apkUrl.isEmpty()) {
+                    runOnUiThread(() -> showUpdateDialog(remoteVersionCode, remoteVersionName, apkUrl, forceUpdate, releaseNotes));
+                } else if (isManual) {
+                    runOnUiThread(() -> Toast.makeText(this, "✅ ॲप आधीच अद्ययावत आहे (v" + CURRENT_APP_VERSION_NAME + ")", Toast.LENGTH_SHORT).show());
+                }
+            } catch (Exception e) {
+                if (isManual) {
+                    runOnUiThread(() -> Toast.makeText(this, "Update check error: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+                }
+            }
+        }).start();
+    }
+
+    private void showUpdateDialog(int remoteVerCode, String remoteVerName, String apkUrl, boolean forceUpdate, String releaseNotes) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("🚀 नवीन ॲप अपडेट उपलब्ध (v" + remoteVerName + ")");
+        builder.setMessage(releaseNotes + "\n\nवास्सा प्रॉपर्टीजचे नवीन अपडेट स्थापित करण्यासाठी खालील बटण दाबा.");
+        builder.setCancelable(!forceUpdate);
+
+        builder.setPositiveButton("✅ Update Now (डाउनलोड करा)", (dialog, which) -> {
+            downloadAndInstallApk(apkUrl, remoteVerName);
+        });
+
+        if (!forceUpdate) {
+            builder.setNegativeButton("नंतर (Later)", (dialog, which) -> dialog.dismiss());
+        }
+
+        builder.show();
+    }
+
+    private void downloadAndInstallApk(final String apkUrl, final String targetVer) {
+        final AlertDialog progressDialog = new AlertDialog.Builder(this)
+                .setTitle("⏳ नवीन ॲप डाउनलोड होत आहे...")
+                .setMessage("कृपया प्रतीक्षा करा, नवीन ॲप डाउनलोड होत आहे...\n0%")
+                .setCancelable(false)
+                .create();
+        progressDialog.show();
+
+        new Thread(() -> {
+            try {
+                File targetDir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
+                if (targetDir == null) {
+                    targetDir = getFilesDir();
+                }
+                if (!targetDir.exists()) {
+                    targetDir.mkdirs();
+                }
+
+                File apkFile = new File(targetDir, "Vassa_Attendance_Update.apk");
+                if (apkFile.exists()) {
+                    apkFile.delete();
+                }
+
+                URL url = new URL(apkUrl);
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setConnectTimeout(20000);
+                conn.setReadTimeout(20000);
+                conn.setInstanceFollowRedirects(true);
+                conn.connect();
+
+                int respCode = conn.getResponseCode();
+                if (respCode == HttpURLConnection.HTTP_MOVED_TEMP || respCode == HttpURLConnection.HTTP_MOVED_PERM || respCode == 307 || respCode == 308) {
+                    String redirUrl = conn.getHeaderField("Location");
+                    conn.disconnect();
+                    url = new URL(redirUrl);
+                    conn = (HttpURLConnection) url.openConnection();
+                    conn.setConnectTimeout(20000);
+                    conn.setReadTimeout(20000);
+                    conn.connect();
+                }
+
+                int fileLength = conn.getContentLength();
+                InputStream input = conn.getInputStream();
+                FileOutputStream output = new FileOutputStream(apkFile);
+
+                byte[] data = new byte[8192];
+                long total = 0;
+                int count;
+                long lastUpdateUI = System.currentTimeMillis();
+
+                while ((count = input.read(data)) != -1) {
+                    total += count;
+                    output.write(data, 0, count);
+
+                    if (fileLength > 0 && (System.currentTimeMillis() - lastUpdateUI > 300)) {
+                        lastUpdateUI = System.currentTimeMillis();
+                        final int progress = (int) (total * 100 / fileLength);
+                        runOnUiThread(() -> progressDialog.setMessage("कृपया प्रतीक्षा करा, नवीन ॲप डाउनलोड होत आहे...\n" + progress + "%"));
+                    }
+                }
+
+                output.flush();
+                output.close();
+                input.close();
+                conn.disconnect();
+
+                runOnUiThread(() -> {
+                    progressDialog.dismiss();
+                    promptInstallApk(apkFile);
+                });
+
+            } catch (Exception e) {
+                runOnUiThread(() -> {
+                    progressDialog.dismiss();
+                    Toast.makeText(this, "❌ डाउनलोड त्रुटी: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                });
+            }
+        }).start();
+    }
+
+    private void promptInstallApk(File apkFile) {
+        if (!apkFile.exists()) {
+            Toast.makeText(this, "❌ APK फाईल सापडली नाही", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                if (!getPackageManager().canRequestPackageInstalls()) {
+                    new AlertDialog.Builder(this)
+                            .setTitle("🔐 परमिशन आवश्यक (Install Permission)")
+                            .setMessage("ॲप स्वयंचलितपणे अपडेट करण्यासाठी कृपया 'Allow from this source' सुरू करा.")
+                            .setPositiveButton("Settings उघडा", (dialog, which) -> {
+                                Intent settingsIntent = new Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES);
+                                settingsIntent.setData(Uri.parse("package:" + getPackageName()));
+                                startActivity(settingsIntent);
+                            })
+                            .setNegativeButton("रद्द करा", null)
+                            .show();
+                    return;
+                }
+            }
+
+            Intent intent = new Intent(Intent.ACTION_VIEW);
+            Uri apkUri = FileProvider.getUriForFile(this, getPackageName() + ".provider", apkFile);
+            intent.setDataAndType(apkUri, "application/vnd.android.package-archive");
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(intent);
+
+        } catch (Exception e) {
+            Toast.makeText(this, "इन्स्टॉलेशन एरर: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
+    }
+
 }
