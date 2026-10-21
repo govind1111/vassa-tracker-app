@@ -1,7 +1,7 @@
 {
   "versionCode": 3,
   "versionName": "3.0.0",
-  "apkUrl": "https://github.com/govind1111/vassa-tracker-app/releases/download/v2.0.0/Vassa_Attendance.apk",
+  "apkUrl": "https://github.com/govind1111/vassa-tracker-app/releases/download/v3.0.0/Vassa_Attendance.apk",
   "forceUpdate": false,
   "releaseNotes": "वास्सा प्रॉपर्टीज ॲपचे नवीन अपडेट: बॅकग्राउंड लोकेशन ट्रॅकिंग सुधारणा व स्वयंचलित इन-ॲप अपडेट इंजिन."
 }
