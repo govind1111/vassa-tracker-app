@@ -65,7 +65,18 @@ public class LocationTrackingService extends Service {
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
         createNotificationChannel();
-        startForeground(NOTIFICATION_ID, buildForegroundNotification("Auto-Sync Active (Every 5 mins) • Stationary Mode ON"));
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(NOTIFICATION_ID, buildForegroundNotification("Auto-Sync Active (Every 5 mins) • Stationary Mode ON"), android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
+            } else {
+                startForeground(NOTIFICATION_ID, buildForegroundNotification("Auto-Sync Active (Every 5 mins) • Stationary Mode ON"));
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "startForeground error: " + e.getMessage());
+            try {
+                startForeground(NOTIFICATION_ID, buildForegroundNotification("Auto-Sync Active (Every 5 mins)"));
+            } catch (Exception ignored) {}
+        }
 
         // Acquire partial wakelock capability to wake CPU during stationary sleep
         PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);

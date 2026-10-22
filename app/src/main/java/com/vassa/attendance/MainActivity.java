@@ -71,8 +71,8 @@ public class MainActivity extends AppCompatActivity {
     // Active Google Apps Script Deployment URL
         // GitHub / Remote Version Auto-Update Endpoint
     public static final String DEFAULT_GITHUB_UPDATE_URL = "https://raw.githubusercontent.com/govind1111/vassa-tracker-app/main/version.json";
-    public static final int CURRENT_APP_VERSION_CODE = 2; // Incremented for Auto-Updater Release
-    public static final String CURRENT_APP_VERSION_NAME = "2.0.0";
+    public static final int CURRENT_APP_VERSION_CODE = 1; // Incremented for Auto-Updater Release
+    public static final String CURRENT_APP_VERSION_NAME = "1.0.0";
 
     public static final String DEFAULT_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycby1bYzPfBAuC9niiJMBHTa4JPx5HjZog1yEnzj9oTzKbIv7EwDGX76dZ_jZHFUemQUR/exec";
 
@@ -109,7 +109,6 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void run() {
             syncLiveMetadataFromSheet(false);
-        checkForAppUpdate(false);
             sheetPollHandler.postDelayed(this, 15000); // Auto-reconcile with Google Sheet every 15s
         }
     };
@@ -177,12 +176,13 @@ public class MainActivity extends AppCompatActivity {
         }
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
-        checkDailyMidnightReset();
-        initData();
+        // Bind all UI Views FIRST to prevent any NullPointerException on startup
         bindViews();
+        initData();
         setupClock();
         setupSpinners();
         setupListeners();
+        checkDailyMidnightReset();
 
         checkAndRequestPermissions();
         updateUI();
@@ -234,11 +234,12 @@ public class MainActivity extends AppCompatActivity {
                     .apply();
 
             stopLocationService();
-            runOnUiThread(() -> {
-                updateUI();
-                syncLiveMetadataFromSheet(false);
-        checkForAppUpdate(false);
-            });
+            if (llProfileBox != null) {
+                runOnUiThread(() -> {
+                    updateUI();
+                    syncLiveMetadataFromSheet(false);
+                });
+            }
         }
     }
 
@@ -598,6 +599,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void updateUI() {
+        if (llProfileBox == null || llStaffSelectGroup == null) return;
         boolean isLocked = prefs.getBoolean("is_device_locked", false);
         String empId = prefs.getString("locked_emp_id", "");
         String empName = prefs.getString("locked_emp_name", "");
@@ -665,7 +667,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void calculateGeofenceDistance() {
-        if (spLocation.getSelectedItem() == null) return;
+        if (spLocation == null || spLocation.getSelectedItem() == null || btnCheckIn == null) return;
         ProjectSite site = (ProjectSite) spLocation.getSelectedItem();
 
         boolean isLocked = prefs.getBoolean("is_device_locked", false);
@@ -1022,11 +1024,19 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void startLocationService() {
-        Intent serviceIntent = new Intent(this, LocationTrackingService.class);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            ContextCompat.startForegroundService(this, serviceIntent);
-        } else {
-            startService(serviceIntent);
+        try {
+            if (!hasLocationPermissions()) {
+                android.util.Log.w("MainActivity", "Location permission not granted, skipping foreground service start.");
+                return;
+            }
+            Intent serviceIntent = new Intent(this, LocationTrackingService.class);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                ContextCompat.startForegroundService(this, serviceIntent);
+            } else {
+                startService(serviceIntent);
+            }
+        } catch (Exception e) {
+            android.util.Log.e("MainActivity", "Error starting LocationTrackingService: " + e.getMessage());
         }
     }
 
