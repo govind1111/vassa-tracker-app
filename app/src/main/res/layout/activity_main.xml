@@ -23,8 +23,8 @@
 
             <ImageView
                 android:id="@+id/ivCompanyLogo"
-                android:layout_width="220dp"
-                android:layout_height="68dp"
+                android:layout_width="300dp"
+                android:layout_height="100dp"
                 android:src="@drawable/vassa_logo_header"
                 android:scaleType="fitCenter"
                 android:adjustViewBounds="true"
