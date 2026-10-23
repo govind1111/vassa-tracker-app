@@ -62,11 +62,13 @@ public class MainActivity extends AppCompatActivity {
     private static final int PERMISSION_REQUEST_CODE = 1001;
     public static final String MASTER_ADMIN_PIN = "25955";
 
-    // Shift Timings: Starts sharp at 06:00 AM (Check-in blocked before 6:00 AM & after 07:30 PM)
-    public static final int DEFAULT_SHIFT_START_HOUR = 6;  // 06:00 AM
+    // Shift Timings: Morning Check-in opens sharp at 06:00 AM. Check-in blocked before 06:00 AM & after Evening Cutoff.
+    public static final int CHECKIN_OPEN_HOUR = 6;         // 06:00 AM Sharp
+    public static final int CHECKIN_OPEN_MIN = 0;          // 00 Mins
+    public static final int DEFAULT_SHIFT_START_HOUR = 10; // 10:00 AM (Official Duty Start)
     public static final int DEFAULT_SHIFT_START_MIN = 0;   // 00 Mins
-    public static final int DEFAULT_CUTOFF_HOUR = 19;      // 07:00 PM (19:30)
-    public static final int DEFAULT_CUTOFF_MIN = 30;       // 30 Mins -> 07:30 PM Hard Cutoff
+    public static final int DEFAULT_CUTOFF_HOUR = 21;      // 09:00 PM (or 19:30 if set in sheet)
+    public static final int DEFAULT_CUTOFF_MIN = 0;
 
     // Active Google Apps Script Deployment URL
         // GitHub / Remote Version Auto-Update Endpoint
@@ -246,17 +248,14 @@ public class MainActivity extends AppCompatActivity {
     // ==============================================================================
     // 2. SHIFT TIMING RESTRICTIONS (06:00 AM START & EVENING CUTOFF)
     // ==============================================================================
-    private boolean isBeforeShiftStart() {
+    private boolean isBeforeMorningOpen() {
         Calendar cal = Calendar.getInstance();
         int curHour = cal.get(Calendar.HOUR_OF_DAY);
         int curMin = cal.get(Calendar.MINUTE);
         int curMins = curHour * 60 + curMin;
 
-        int sHour = prefs.getInt("shift_start_hour", DEFAULT_SHIFT_START_HOUR);
-        int sMin = prefs.getInt("shift_start_min", DEFAULT_SHIFT_START_MIN);
-        int startMins = sHour * 60 + sMin;
-
-        return curMins < startMins;
+        int openMins = CHECKIN_OPEN_HOUR * 60 + CHECKIN_OPEN_MIN; // 06:00 AM
+        return curMins < openMins;
     }
 
     private boolean isAfterEveningCutoff() {
@@ -444,7 +443,7 @@ public class MainActivity extends AppCompatActivity {
                 return;
             }
 
-            if (isBeforeShiftStart()) {
+            if (isBeforeMorningOpen()) {
                 Toast.makeText(this, "⛔ Check-In Blocked: Office shift subah 06:00 AM se shuru hoti hai. 06:00 AM ke pehle check-in allowed nahi hai.", Toast.LENGTH_LONG).show();
                 return;
             }
@@ -682,17 +681,17 @@ public class MainActivity extends AppCompatActivity {
                 return;
             }
 
-            if (isBeforeShiftStart()) {
+            if (isBeforeMorningOpen()) {
                 btnCheckIn.setEnabled(false);
                 btnCheckIn.setBackgroundResource(R.drawable.bg_btn_disabled);
-                btnCheckIn.setText("⛔ Shift Starts at 06:00 AM");
+                btnCheckIn.setText("⛔ Check-In Opens at 06:00 AM");
                 return;
             }
 
             if (isAfterEveningCutoff()) {
                 btnCheckIn.setEnabled(false);
                 btnCheckIn.setBackgroundResource(R.drawable.bg_btn_disabled);
-                btnCheckIn.setText("⛔ Shift Over (Closed at 07:30 PM)");
+                btnCheckIn.setText("⛔ Shift Over (Check-In Closed)");
                 return;
             }
         }
@@ -796,7 +795,7 @@ public class MainActivity extends AppCompatActivity {
                 }
 
                 if ("Check-In".equals(punchType)) {
-                    if (isBeforeShiftStart()) {
+                    if (isBeforeMorningOpen()) {
                         runOnUiThread(() -> Toast.makeText(MainActivity.this, "⛔ Check-In Blocked: Office shift subah 06:00 AM se shuru hoti hai.", Toast.LENGTH_LONG).show());
                         return;
                     }
