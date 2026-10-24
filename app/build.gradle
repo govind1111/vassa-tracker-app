@@ -16,9 +16,24 @@ android {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        vassaConfig {
+            storeFile file("vassa-keystore.jks")
+            storePassword "vassa25955"
+            keyAlias "vassa_key"
+            keyPassword "vassa25955"
+            v1SigningEnabled true
+            v2SigningEnabled true
+        }
+    }
+
     buildTypes {
+        debug {
+            signingConfig signingConfigs.vassaConfig
+        }
         release {
             minifyEnabled false
+            signingConfig signingConfigs.vassaConfig
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
