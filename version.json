@@ -1,7 +1,7 @@
 {
-  "versionCode": 2,
-  "versionName": "1.1.0",
-  "apkUrl": "https://github.com/govind1111/vassa-tracker-app/releases/download/v1.1.0/app-debug.apk",
-  "releaseNotes": "v1.1.0 Update:\n• Official Vassa Properties App Icon & Header Logo\n• Monthly Attendance Summary & Daywise Register Sync\n• Direct Staff & Site Management UI\n• Enhanced GPS Geofence & Auto-Sync",
-  "forceUpdate": false
+  "versionCode": 1,
+  "versionName": "1.0.0",
+  "apkUrl": "https://raw.githubusercontent.com/govind1111/vassa-tracker-app/main/app-release.apk",
+  "forceUpdate": false,
+  "releaseNotes": "वास्सा प्रॉपर्टीज हजेरी ॲप अधिकृत रिलीज v1.0.0"
 }
