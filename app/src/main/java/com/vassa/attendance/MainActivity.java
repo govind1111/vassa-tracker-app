@@ -695,6 +695,7 @@ public class MainActivity extends AppCompatActivity {
             llBannerStatus.setVisibility(View.VISIBLE);
             llBannerStatus.setBackgroundResource(R.drawable.bg_radar_inside);
             tvBannerTitle.setText("Checked-In");
+tvBannerTitle.setTextSize(20);
             tvBannerTitle.setTextColor(0xFF047857);
             tvBannerTime.setText("Time: " + checkinTime + " (Present)");
             tvBannerWarn.setVisibility(View.GONE); // NIKAL DIYA (User Request)
@@ -710,6 +711,7 @@ public class MainActivity extends AppCompatActivity {
             llBannerStatus.setVisibility(View.VISIBLE);
             llBannerStatus.setBackgroundResource(R.drawable.bg_radar_locating);
             tvBannerTitle.setText("Checked-Out");
+tvBannerTitle.setTextSize(20);
             tvBannerTitle.setTextColor(0xFF0369A1);
             String checkoutTime = prefs.getString("checkout_time", "-");
             tvBannerTime.setText("In: " + checkinTime + "  |  Out: " + checkoutTime);
