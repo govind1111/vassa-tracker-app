@@ -41,21 +41,20 @@ jobs:
           name: Vassa-Attendance-App
           path: app/build/outputs/apk/debug/vassa-attendace.apk
 
-      - name: Publish GitHub Release v1.1.4
+      - name: Publish GitHub Release v1.1.5
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         with:
-          tag_name: v1.1.4
-          name: Vassa Attendance App v1.1.4
+          tag_name: v1.1.5
+          name: Vassa Attendance App v1.1.5
           body: |
-            ### Vassa Properties — Official Field Duty & Attendance Tracker (v1.1.4)
-            - Single-Screen Fit matching Staff Web App GUI exactly
-            - Compact modern Card layout with zero-scroll optimization
-            - Direct Google Sheet Real-time Telemetry (24/7 background service)
-            - 5-Minute Auto-Sync Stationary Guard (Doze mode bypass)
+            ### Vassa Properties — Official Field Duty & Attendance Tracker (v1.1.5)
+            - Clean balanced card and box margins (no overcrowding)
+            - Solid red Check-Out button matching Staff Web App style
+            - Removed manual ping button for simplified, clutter-free single screen UI
+            - Dual-CDN auto-updater fallback engine (Firebase Hosting + GitHub raw)
             - 100m Geofence Radar Check-In / Check-Out
             - Single-Device Lock with Admin PIN security
-            - Automatic In-App Updating System
           files: |
             app/build/outputs/apk/debug/vassa-attendace.apk
             app/build/outputs/apk/debug/vassa-attendance.apk

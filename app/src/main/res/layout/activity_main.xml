@@ -9,10 +9,10 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:paddingLeft="10dp"
-        android:paddingRight="10dp"
-        android:paddingTop="8dp"
-        android:paddingBottom="8dp">
+        android:paddingLeft="12dp"
+        android:paddingRight="12dp"
+        android:paddingTop="10dp"
+        android:paddingBottom="10dp">
 
         <!-- 1. Top Brand Card (Matching Web App Brand Card) -->
         <LinearLayout
@@ -20,18 +20,18 @@
             android:layout_height="wrap_content"
             android:background="@drawable/bg_card_white"
             android:orientation="vertical"
-            android:paddingLeft="10dp"
-            android:paddingRight="10dp"
-            android:paddingTop="8dp"
-            android:paddingBottom="8dp"
+            android:paddingLeft="12dp"
+            android:paddingRight="12dp"
+            android:paddingTop="12dp"
+            android:paddingBottom="12dp"
             android:gravity="center"
-            android:layout_marginBottom="6dp">
+            android:layout_marginBottom="12dp">
 
             <ImageView
                 android:id="@+id/ivCompanyLogo"
                 android:layout_width="wrap_content"
-                android:layout_height="44dp"
-                android:maxWidth="200dp"
+                android:layout_height="46dp"
+                android:maxWidth="210dp"
                 android:src="@drawable/vassa_logo_header"
                 android:scaleType="fitCenter"
                 android:adjustViewBounds="true"
@@ -48,8 +48,8 @@
                 android:textSize="22sp"
                 android:textStyle="bold"
                 android:fontFamily="sans-serif"
-                android:layout_marginTop="2dp"
-                android:layout_marginBottom="1dp" />
+                android:layout_marginTop="4dp"
+                android:layout_marginBottom="2dp" />
 
             <TextView
                 android:id="@+id/tvLiveDate"
@@ -70,11 +70,11 @@
                 android:textStyle="bold"
                 android:fontFamily="sans-serif"
                 android:background="@drawable/bg_pill_shift"
-                android:paddingLeft="12dp"
-                android:paddingRight="12dp"
-                android:paddingTop="3dp"
-                android:paddingBottom="3dp"
-                android:layout_marginTop="5dp" />
+                android:paddingLeft="14dp"
+                android:paddingRight="14dp"
+                android:paddingTop="4dp"
+                android:paddingBottom="4dp"
+                android:layout_marginTop="8dp" />
         </LinearLayout>
 
         <!-- Main Card Container -->
@@ -83,11 +83,11 @@
             android:layout_height="wrap_content"
             android:background="@drawable/bg_card_white"
             android:orientation="vertical"
-            android:paddingLeft="10dp"
-            android:paddingRight="10dp"
-            android:paddingTop="10dp"
-            android:paddingBottom="10dp"
-            android:layout_marginBottom="6dp">
+            android:paddingLeft="14dp"
+            android:paddingRight="14dp"
+            android:paddingTop="14dp"
+            android:paddingBottom="14dp"
+            android:layout_marginBottom="10dp">
 
             <!-- 2. Locked Staff Profile Badge (Anti-Proxy) -->
             <LinearLayout
@@ -96,10 +96,10 @@
                 android:layout_height="wrap_content"
                 android:background="@drawable/bg_card_profile_locked"
                 android:orientation="horizontal"
-                android:padding="8dp"
+                android:padding="10dp"
                 android:gravity="center_vertical"
                 android:visibility="gone"
-                android:layout_marginBottom="6dp">
+                android:layout_marginBottom="12dp">
 
                 <LinearLayout
                     android:layout_width="0dp"
@@ -126,7 +126,7 @@
                         android:textSize="15sp"
                         android:textStyle="bold"
                         android:fontFamily="sans-serif"
-                        android:layout_marginTop="1dp" />
+                        android:layout_marginTop="2dp" />
 
                     <TextView
                         android:id="@+id/tvProfileMeta"
@@ -136,20 +136,20 @@
                         android:textColor="#047857"
                         android:textSize="11sp"
                         android:fontFamily="sans-serif"
-                        android:layout_marginTop="1dp" />
+                        android:layout_marginTop="2dp" />
                 </LinearLayout>
 
                 <Button
                     android:id="@+id/btnResetAdmin"
                     android:layout_width="wrap_content"
-                    android:layout_height="30dp"
+                    android:layout_height="32dp"
                     android:text="Reset (Admin)"
                     android:textColor="#334155"
                     android:textSize="10sp"
                     android:fontFamily="sans-serif"
                     android:background="@drawable/bg_btn_switch"
-                    android:paddingLeft="8dp"
-                    android:paddingRight="8dp" />
+                    android:paddingLeft="10dp"
+                    android:paddingRight="10dp" />
             </LinearLayout>
 
             <!-- 3. Staff Selection (Shown when device is not locked) -->
@@ -158,7 +158,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:layout_marginBottom="6dp">
+                android:layout_marginBottom="12dp">
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -169,15 +169,15 @@
                     android:textStyle="bold"
                     android:fontFamily="sans-serif"
                     android:letterSpacing="0.04"
-                    android:layout_marginBottom="3dp" />
+                    android:layout_marginBottom="6dp" />
 
                 <Spinner
                     android:id="@+id/spStaff"
                     android:layout_width="match_parent"
-                    android:layout_height="38dp"
+                    android:layout_height="40dp"
                     android:background="@drawable/bg_spinner"
-                    android:paddingLeft="10dp"
-                    android:paddingRight="10dp" />
+                    android:paddingLeft="12dp"
+                    android:paddingRight="12dp" />
             </LinearLayout>
 
             <!-- 4. Live Punch Status Banner -->
@@ -187,10 +187,10 @@
                 android:layout_height="wrap_content"
                 android:background="@drawable/bg_radar_inside"
                 android:orientation="vertical"
-                android:padding="8dp"
+                android:padding="10dp"
                 android:gravity="center"
                 android:visibility="gone"
-                android:layout_marginBottom="6dp">
+                android:layout_marginBottom="12dp">
 
                 <TextView
                     android:id="@+id/tvBannerTitle"
@@ -210,7 +210,7 @@
                     android:textColor="#000000"
                     android:textSize="11sp"
                     android:fontFamily="sans-serif"
-                    android:layout_marginTop="1dp" />
+                    android:layout_marginTop="2dp" />
 
                 <TextView
                     android:id="@+id/tvBannerWarn"
@@ -220,7 +220,7 @@
                     android:textColor="#047857"
                     android:textSize="10sp"
                     android:fontFamily="sans-serif"
-                    android:layout_marginTop="2dp" />
+                    android:layout_marginTop="3dp" />
             </LinearLayout>
 
             <!-- 5. Site Selection -->
@@ -228,7 +228,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:layout_marginBottom="6dp">
+                android:layout_marginBottom="12dp">
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -239,15 +239,15 @@
                     android:textStyle="bold"
                     android:fontFamily="sans-serif"
                     android:letterSpacing="0.04"
-                    android:layout_marginBottom="3dp" />
+                    android:layout_marginBottom="6dp" />
 
                 <Spinner
                     android:id="@+id/spLocation"
                     android:layout_width="match_parent"
-                    android:layout_height="38dp"
+                    android:layout_height="40dp"
                     android:background="@drawable/bg_spinner"
-                    android:paddingLeft="10dp"
-                    android:paddingRight="10dp" />
+                    android:paddingLeft="12dp"
+                    android:paddingRight="12dp" />
             </LinearLayout>
 
             <!-- 6. GPS Geofence Radar Card -->
@@ -257,11 +257,11 @@
                 android:layout_height="wrap_content"
                 android:background="@drawable/bg_radar_locating"
                 android:orientation="horizontal"
-                android:padding="8dp"
+                android:padding="10dp"
                 android:gravity="center_vertical"
                 android:clickable="true"
                 android:focusable="true"
-                android:layout_marginBottom="8dp">
+                android:layout_marginBottom="14dp">
 
                 <TextView
                     android:id="@+id/tvRadarIcon"
@@ -294,7 +294,7 @@
                         android:textColor="#0284C7"
                         android:textSize="10sp"
                         android:fontFamily="sans-serif"
-                        android:layout_marginTop="1dp" />
+                        android:layout_marginTop="2dp" />
                 </LinearLayout>
 
                 <TextView
@@ -305,17 +305,17 @@
                     android:textSize="11sp"
                     android:textStyle="bold"
                     android:fontFamily="sans-serif"
-                    android:paddingLeft="6dp"
-                    android:paddingRight="6dp"
-                    android:paddingTop="2dp"
-                    android:paddingBottom="2dp" />
+                    android:paddingLeft="8dp"
+                    android:paddingRight="8dp"
+                    android:paddingTop="3dp"
+                    android:paddingBottom="3dp" />
             </LinearLayout>
 
-            <!-- 7. Dynamic Action Buttons (Normal Font Weight as in Web App) -->
+            <!-- 7. Dynamic Action Buttons (Red for Check-Out as in Web App) -->
             <Button
                 android:id="@+id/btnCheckIn"
                 android:layout_width="match_parent"
-                android:layout_height="44dp"
+                android:layout_height="46dp"
                 android:text="Check-In Blocked (Select Name)"
                 android:textColor="#FFFFFF"
                 android:textSize="13sp"
@@ -324,12 +324,12 @@
                 android:background="@drawable/bg_btn_disabled"
                 android:enabled="false"
                 android:gravity="center"
-                android:layout_marginBottom="6dp" />
+                android:layout_marginBottom="10dp" />
 
             <Button
                 android:id="@+id/btnCheckOut"
                 android:layout_width="match_parent"
-                android:layout_height="44dp"
+                android:layout_height="46dp"
                 android:text="CHECK-OUT (END DUTY)"
                 android:textColor="#FFFFFF"
                 android:textSize="13sp"
@@ -338,34 +338,7 @@
                 android:background="@drawable/bg_btn_checkout"
                 android:gravity="center"
                 android:visibility="gone"
-                android:layout_marginBottom="6dp" />
-
-            <!-- 8. Compact Telemetry Ping Button -->
-            <androidx.appcompat.widget.AppCompatButton
-                android:id="@+id/btnManualPing"
-                android:layout_width="match_parent"
-                android:layout_height="38dp"
-                android:text="Sync Current Location"
-                android:textColor="#0284C7"
-                android:textSize="12sp"
-                android:textStyle="normal"
-                android:fontFamily="sans-serif"
-                android:textAllCaps="false"
-                android:background="@drawable/bg_btn_ping"
-                android:gravity="center"
-                android:paddingLeft="10dp"
-                android:paddingRight="10dp" />
-
-            <TextView
-                android:id="@+id/tvPingStatus"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Live GPS auto-sync active in background"
-                android:textColor="#64748B"
-                android:textSize="10sp"
-                android:fontFamily="sans-serif"
-                android:gravity="center"
-                android:layout_marginTop="3dp" />
+                android:layout_marginBottom="10dp" />
 
             <TextView
                 android:layout_width="match_parent"
@@ -375,7 +348,7 @@
                 android:textSize="10sp"
                 android:fontFamily="sans-serif"
                 android:gravity="center"
-                android:layout_marginTop="4dp" />
+                android:layout_marginTop="6dp" />
 
         </LinearLayout>
 
@@ -389,7 +362,7 @@
             android:textSize="10sp"
             android:fontFamily="sans-serif"
             android:gravity="center"
-            android:padding="3dp" />
+            android:padding="6dp" />
 
     </LinearLayout>
 </ScrollView>

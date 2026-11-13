@@ -71,8 +71,9 @@ public class MainActivity extends AppCompatActivity {
     // Active Google Apps Script Deployment URL
     // Official Firebase Hosting Remote Version Auto-Update Endpoint
     public static final String DEFAULT_GITHUB_UPDATE_URL = "https://vassa-attendance.web.app/version.json";
-    public static final int CURRENT_APP_VERSION_CODE = 6; // Incremented for Single-Screen GUI Release v1.1.4
-    public static final String CURRENT_APP_VERSION_NAME = "1.1.4";
+    public static final String FALLBACK_GITHUB_UPDATE_URL = "https://raw.githubusercontent.com/govind1111/vassa-tracker-app/main/version.json";
+    public static final int CURRENT_APP_VERSION_CODE = 7; // Incremented for Single-Screen GUI Release v1.1.5
+    public static final String CURRENT_APP_VERSION_NAME = "1.1.5";
 
     public static final String DEFAULT_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycby1bYzPfBAuC9niiJMBHTa4JPx5HjZog1yEnzj9oTzKbIv7EwDGX76dZ_jZHFUemQUR/exec";
 
@@ -89,8 +90,8 @@ public class MainActivity extends AppCompatActivity {
     private LinearLayout llRadarCard;
     private TextView tvRadarIcon, tvRadarTitle, tvRadarDesc;
 
-    private Button btnCheckIn, btnCheckOut, btnManualPing;
-    private TextView tvPingStatus, tvAdminSettings;
+    private Button btnCheckIn, btnCheckOut;
+    private TextView tvAdminSettings;
 
     private SharedPreferences prefs;
     private FusedLocationProviderClient fusedLocationClient;
@@ -346,8 +347,6 @@ public class MainActivity extends AppCompatActivity {
 
         btnCheckIn = findViewById(R.id.btnCheckIn);
         btnCheckOut = findViewById(R.id.btnCheckOut);
-        btnManualPing = findViewById(R.id.btnManualPing);
-        tvPingStatus = findViewById(R.id.tvPingStatus);
         tvAdminSettings = findViewById(R.id.tvAdminSettings);
     }
 
@@ -465,12 +464,7 @@ public class MainActivity extends AppCompatActivity {
         // 3. Check-Out Button
         btnCheckOut.setOnClickListener(v -> recordAttendancePunch("Check-Out"));
 
-        // 4. Manual Location Ping Button (Guaranteed Visible Label)
-        btnManualPing.setText("PING / MANUAL LOCATION SYNC");
-        btnManualPing.setTextColor(0xFF0369A1);
-        btnManualPing.setOnClickListener(v -> sendManualTelemetryPing());
-
-        // 5. Admin Settings Dialog (Webhook Endpoint)
+        // 4. Admin Settings Dialog (Webhook Endpoint)
         tvAdminSettings.setOnClickListener(v -> promptAdminSettings());
     }
 
@@ -636,8 +630,6 @@ public class MainActivity extends AppCompatActivity {
             btnCheckIn.setVisibility(View.GONE);
             btnCheckOut.setVisibility(View.VISIBLE);
             btnCheckOut.setEnabled(true);
-            btnManualPing.setVisibility(View.VISIBLE);
-            tvPingStatus.setVisibility(View.VISIBLE);
         } else if (hasCheckedOut) {
             // DAY COMPLETED (Shift Completed - Both Check-In and Check-Out Done)
             llBannerStatus.setVisibility(View.VISIBLE);
@@ -652,15 +644,11 @@ public class MainActivity extends AppCompatActivity {
             // BOTH BUTTONS OFF! (User Request)
             btnCheckIn.setVisibility(View.GONE);
             btnCheckOut.setVisibility(View.GONE);
-            btnManualPing.setVisibility(View.GONE);
-            tvPingStatus.setVisibility(View.GONE);
         } else {
             // READY TO CHECK-IN (Morning Shift Start)
             llBannerStatus.setVisibility(View.GONE);
             btnCheckIn.setVisibility(View.VISIBLE);
             btnCheckOut.setVisibility(View.GONE);
-            btnManualPing.setVisibility(View.GONE);
-            tvPingStatus.setVisibility(View.GONE);
         }
 
         calculateGeofenceDistance();
@@ -921,104 +909,6 @@ public class MainActivity extends AppCompatActivity {
                 conn.disconnect();
             } catch (Exception e) {
                 runOnUiThread(() -> Toast.makeText(MainActivity.this, "Error saving punch: " + e.getMessage(), Toast.LENGTH_LONG).show());
-            }
-        }).start();
-    }
-
-    private void sendManualTelemetryPing() {
-        if (!hasLocationPermissions()) {
-            requestLocationPermissions();
-            return;
-        }
-
-        String empId = prefs.getString("locked_emp_id", "");
-        if (empId.isEmpty()) {
-            Toast.makeText(this, "Please select and register your name first!", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        btnManualPing.setEnabled(false);
-        tvPingStatus.setText("Acquiring high-accuracy GPS for ping...");
-
-        try {
-            fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null)
-                    .addOnSuccessListener(this, location -> {
-                        if (location != null) {
-                            currentLat = location.getLatitude();
-                            currentLon = location.getLongitude();
-                            currentAccuracy = location.getAccuracy();
-                            calculateGeofenceDistance();
-                            dispatchManualPingHttpRequest(location);
-                        } else {
-                            tvPingStatus.setText("Failed to get accurate GPS fix");
-                            btnManualPing.setEnabled(true);
-                        }
-                    })
-                    .addOnFailureListener(this, e -> {
-                        tvPingStatus.setText("GPS fix error: " + e.getMessage());
-                        btnManualPing.setEnabled(true);
-                    });
-        } catch (SecurityException se) {
-            tvPingStatus.setText("Location permission missing");
-            btnManualPing.setEnabled(true);
-        }
-    }
-
-    private void dispatchManualPingHttpRequest(Location location) {
-        new Thread(() -> {
-            try {
-                String empId = prefs.getString("locked_emp_id", "");
-                String empName = prefs.getString("locked_emp_name", "");
-                String webhookUrl = prefs.getString("webhook_url", DEFAULT_WEBHOOK_URL);
-
-                ProjectSite site = (ProjectSite) spLocation.getSelectedItem();
-                String siteName = (site != null) ? site.name : "Field Duty / On Route";
-
-                BatteryManager bm = (BatteryManager) getSystemService(BATTERY_SERVICE);
-                int batteryPct = (bm != null) ? bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY) : -1;
-
-                JSONObject json = new JSONObject();
-                json.put("action", "live_ping");
-                json.put("empId", empId);
-                json.put("empName", empName);
-                json.put("lat", location.getLatitude());
-                json.put("lon", location.getLongitude());
-                json.put("accuracy", "+/-" + Math.round(location.getAccuracy()) + "m");
-                json.put("targetSiteName", siteName);
-                json.put("distanceMeters", Math.round(distanceToSite));
-                json.put("battery", batteryPct > 0 ? (batteryPct + "%") : "-");
-                json.put("remarks", "Manual User Location Ping (Native App)");
-
-                URL url = new URL(webhookUrl);
-                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                conn.setRequestMethod("POST");
-                conn.setRequestProperty("Content-Type", "application/json; utf-8");
-                conn.setDoOutput(true);
-                conn.setConnectTimeout(15000);
-                conn.setReadTimeout(15000);
-
-                try (OutputStream os = conn.getOutputStream()) {
-                    byte[] input = json.toString().getBytes(StandardCharsets.UTF_8);
-                    os.write(input, 0, input.length);
-                }
-
-                int code = conn.getResponseCode();
-                runOnUiThread(() -> {
-                    btnManualPing.setEnabled(true);
-                    if (code == 200 || code == 302) {
-                        String timeNow = new SimpleDateFormat("hh:mm:ss a", Locale.getDefault()).format(new Date());
-                        tvPingStatus.setText("Location synced with Google Sheet (" + timeNow + ")");
-                        Toast.makeText(MainActivity.this, "Live location coordinates pushed to Live_Tracking sheet!", Toast.LENGTH_SHORT).show();
-                    } else {
-                        tvPingStatus.setText("Server returned HTTP " + code);
-                    }
-                });
-                conn.disconnect();
-            } catch (Exception e) {
-                runOnUiThread(() -> {
-                    btnManualPing.setEnabled(true);
-                    tvPingStatus.setText("Ping sync failed: " + e.getMessage());
-                });
             }
         }).start();
     }
@@ -1323,6 +1213,11 @@ public class MainActivity extends AppCompatActivity {
             try {
                 String updateUrl = prefs.getString("github_update_url", DEFAULT_GITHUB_UPDATE_URL);
                 String jsonStr = httpGetWithRedirects(updateUrl);
+
+                if (jsonStr == null || jsonStr.trim().isEmpty()) {
+                    // Dual-CDN Fallback: If Firebase Hosting is slow or caching, fetch from GitHub raw immediately
+                    jsonStr = httpGetWithRedirects(FALLBACK_GITHUB_UPDATE_URL);
+                }
 
                 if (jsonStr == null || jsonStr.trim().isEmpty()) {
                     String cachedSettings = prefs.getString("cached_sheet_settings", null);
