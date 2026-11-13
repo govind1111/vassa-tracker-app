@@ -2,8 +2,11 @@ name: Build Android APK
 
 on:
   push:
-    branches: [ '**' ]
+    branches: [ 'main', 'master' ]
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -20,14 +23,29 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
-        with:
-          gradle-version: '8.2'
 
       - name: Build Debug APK
         run: gradle assembleDebug --stacktrace
 
-      - name: Upload APK
+      - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: Vassa-Attendance-App
           path: app/build/outputs/apk/debug/*.apk
+
+      - name: Publish GitHub Release v1.1.0
+        uses: softprops/action-gh-release@v2
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        with:
+          tag_name: v1.1.0
+          name: Vassa Attendance App v1.1.0
+          body: |
+            ### Vassa Properties — Official Field Duty & Attendance Tracker (v1.1.0)
+            - Direct Google Sheet Real-time Telemetry (24/7 background service)
+            - 5-Minute Auto-Sync Stationary Guard (Doze mode bypass)
+            - 100m Geofence Radar Check-In / Check-Out
+            - Single-Device Lock with Admin PIN security
+            - Automatic In-App Updating System
+          files: app/build/outputs/apk/debug/app-debug.apk
+          draft: false
+          prerelease: false

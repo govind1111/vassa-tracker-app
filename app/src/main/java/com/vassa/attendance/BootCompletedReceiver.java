@@ -12,7 +12,9 @@ public class BootCompletedReceiver extends BroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
         if (Intent.ACTION_BOOT_COMPLETED.equals(intent.getAction())) {
             SharedPreferences prefs = context.getSharedPreferences("VassaPrefs", Context.MODE_PRIVATE);
-            boolean isTrackingEnabled = prefs.getBoolean("is_tracking_active", false);
+            boolean hasCheckedIn = prefs.getBoolean("has_checked_in", false);
+            boolean hasCheckedOut = prefs.getBoolean("has_checked_out", false);
+            boolean isTrackingEnabled = hasCheckedIn && !hasCheckedOut;
 
             if (isTrackingEnabled) {
                 Log.d("VassaBoot", "Phone rebooted. Restarting Vassa Location Service...");
