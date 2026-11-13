@@ -1,7 +1,8 @@
 {
-  "versionCode": 3,
-  "versionName": "1.1.1",
-  "apkUrl": "https://github.com/govind1111/vassa-tracker-app/releases/download/v1.1.1/vassa-attendace.apk",
-  "releaseNotes": "Vassa Attendance v1.1.1 Update:\n- Direct Google Sheet Sync\n- Accurate GPS Geofence Check-In & Check-Out\n- Daywise Register & Monthly Attendance\n- Automatic In-App Updating System",
+  "versionCode": 4,
+  "versionName": "1.1.2",
+  "apkUrl": "https://github.com/govind1111/vassa-tracker-app/releases/download/v1.1.2/vassa-attendace.apk",
+  "releaseNotes": "New Version Released...",
+  "message": "New Version Released...",
   "forceUpdate": false
 }

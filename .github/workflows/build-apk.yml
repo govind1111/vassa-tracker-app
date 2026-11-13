@@ -41,14 +41,14 @@ jobs:
           name: Vassa-Attendance-App
           path: app/build/outputs/apk/debug/vassa-attendace.apk
 
-      - name: Publish GitHub Release v1.1.1
+      - name: Publish GitHub Release v1.1.2
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         with:
-          tag_name: v1.1.1
-          name: Vassa Attendance App v1.1.1
+          tag_name: v1.1.2
+          name: Vassa Attendance App v1.1.2
           body: |
-            ### Vassa Properties — Official Field Duty & Attendance Tracker (v1.1.1)
+            ### Vassa Properties — Official Field Duty & Attendance Tracker (v1.1.2)
             - Direct Google Sheet Real-time Telemetry (24/7 background service)
             - 5-Minute Auto-Sync Stationary Guard (Doze mode bypass)
             - 100m Geofence Radar Check-In / Check-Out

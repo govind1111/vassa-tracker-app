@@ -71,8 +71,8 @@ public class MainActivity extends AppCompatActivity {
     // Active Google Apps Script Deployment URL
         // GitHub / Remote Version Auto-Update Endpoint
     public static final String DEFAULT_GITHUB_UPDATE_URL = "https://raw.githubusercontent.com/govind1111/vassa-tracker-app/main/version.json";
-    public static final int CURRENT_APP_VERSION_CODE = 3; // Incremented for Auto-Updater Release
-    public static final String CURRENT_APP_VERSION_NAME = "1.1.1";
+    public static final int CURRENT_APP_VERSION_CODE = 4; // Incremented for Auto-Updater Release v1.1.2
+    public static final String CURRENT_APP_VERSION_NAME = "1.1.2";
 
     public static final String DEFAULT_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycby1bYzPfBAuC9niiJMBHTa4JPx5HjZog1yEnzj9oTzKbIv7EwDGX76dZ_jZHFUemQUR/exec";
 
@@ -1363,8 +1363,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void showUpdateDialog(int remoteVerCode, String remoteVerName, String apkUrl, boolean forceUpdate, String releaseNotes) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("New App Update Available (v" + remoteVerName + ")");
-        builder.setMessage(releaseNotes + "\n\nPlease update Vassa Attendance to continue with the latest features.");
+        builder.setMessage("New Version Released...");
         builder.setCancelable(!forceUpdate);
 
         builder.setPositiveButton("Update Now", (dialog, which) -> {
@@ -1372,7 +1371,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
         if (!forceUpdate) {
-            builder.setNegativeButton("Later", (dialog, which) -> dialog.dismiss());
+            builder.setNegativeButton("Update Later", (dialog, which) -> dialog.dismiss());
         }
 
         builder.show();
