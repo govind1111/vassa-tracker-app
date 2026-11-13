@@ -632,7 +632,7 @@ public class MainActivity extends AppCompatActivity {
             btnCheckOut.setEnabled(true);
             btnCheckOut.setBackgroundResource(R.drawable.bg_btn_checkout);
             btnCheckOut.setBackgroundTintList(null);
-            btnCheckOut.setText("Punch OUT (End Duty)");
+            btnCheckOut.setText("Check-Out");
         } else if (hasCheckedOut) {
             // DAY COMPLETED (Shift Completed - Both Check-In and Check-Out Done)
             llBannerStatus.setVisibility(View.VISIBLE);

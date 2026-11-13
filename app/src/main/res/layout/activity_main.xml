@@ -333,7 +333,7 @@
                 android:id="@+id/btnCheckOut"
                 android:layout_width="match_parent"
                 android:layout_height="46dp"
-                android:text="Punch OUT (End Duty)"
+                android:text="Check-Out"
                 android:textColor="#FFFFFF"
                 android:textSize="13sp"
                 android:textStyle="normal"
