@@ -67,9 +67,9 @@ public class LocationTrackingService extends Service {
         createNotificationChannel();
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                startForeground(NOTIFICATION_ID, buildForegroundNotification("Auto-Sync Active (Every 5 mins) • Stationary Mode ON"), android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
+                startForeground(NOTIFICATION_ID, buildForegroundNotification("Auto-Sync Active (Every 5 mins) - Stationary Mode ON"), android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
             } else {
-                startForeground(NOTIFICATION_ID, buildForegroundNotification("Auto-Sync Active (Every 5 mins) • Stationary Mode ON"));
+                startForeground(NOTIFICATION_ID, buildForegroundNotification("Auto-Sync Active (Every 5 mins) - Stationary Mode ON"));
             }
         } catch (Exception e) {
             Log.e(TAG, "startForeground error: " + e.getMessage());
@@ -113,7 +113,7 @@ public class LocationTrackingService extends Service {
         );
 
         return new NotificationCompat.Builder(this, CHANNEL_ID)
-                .setContentTitle("🏢 Vassa Properties — Field Duty Active")
+                .setContentTitle("Vassa Properties - Field Duty Active")
                 .setContentText(statusText)
                 .setSmallIcon(android.R.drawable.ic_menu_mylocation)
                 .setContentIntent(pendingIntent)
@@ -178,14 +178,14 @@ public class LocationTrackingService extends Service {
             try {
                 SharedPreferences p = getSharedPreferences("VassaPrefs", MODE_PRIVATE);
                 if (!p.getBoolean("has_checked_in", false) || p.getBoolean("has_checked_out", false)) {
-                    Log.i(TAG, "⛔ Stationary timer: Staff is not on active duty. Halting service.");
+                    Log.i(TAG, "Stationary timer: Staff is not on active duty. Halting service.");
                     stopSelf();
                     return;
                 }
                 if (wakeLock != null) {
                     wakeLock.acquire(15000); // 15s wake lock to complete network request
                 }
-                Log.d(TAG, "⏰ 5-Minute Stationary Guard triggered: Requesting fresh location fix...");
+                Log.d(TAG, "5-Minute Stationary Guard triggered: Requesting fresh location fix...");
 
                 fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null)
                         .addOnSuccessListener(location -> {
@@ -223,7 +223,7 @@ public class LocationTrackingService extends Service {
 
                 // STRICT RULE: Location sync MUST ONLY run while currently On Duty (Checked-In AND NOT Checked-Out)
                 if (!hasCheckedIn || hasCheckedOut) {
-                    Log.i(TAG, "⛔ [SYNC HALTED] Staff is not on active duty (hasCheckedIn=" + hasCheckedIn + ", hasCheckedOut=" + hasCheckedOut + "). Stopping background service.");
+                    Log.i(TAG, "[SYNC HALTED] Staff is not on active duty (hasCheckedIn=" + hasCheckedIn + ", hasCheckedOut=" + hasCheckedOut + "). Stopping background service.");
                     stopSelf();
                     return;
                 }
@@ -253,7 +253,7 @@ public class LocationTrackingService extends Service {
                 json.put("empName", empName);
                 json.put("lat", location.getLatitude());
                 json.put("lon", location.getLongitude());
-                json.put("accuracy", "±" + Math.round(location.getAccuracy()) + "m");
+                json.put("accuracy", "+/-" + Math.round(location.getAccuracy()) + "m");
                 json.put("speed", Math.round(location.getSpeed() * 3.6) + " km/h");
                 json.put("battery", (batteryPct > 0 ? (batteryPct + "%") : "Unknown"));
                 json.put("remarks", "Native Android Auto-Sync 5min (" + triggerSource + ")");
@@ -275,14 +275,14 @@ public class LocationTrackingService extends Service {
                 String timeStr = new SimpleDateFormat("hh:mm a", Locale.getDefault()).format(new Date());
 
                 if (code == 200 || code == 302) {
-                    Log.i(TAG, "✅ [GPS AUTO-SYNC SUCCESS] " + empName + " lat=" + location.getLatitude() + " lon=" + location.getLongitude() + " at " + timeStr + " (" + triggerSource + ")");
+                    Log.i(TAG, "[GPS AUTO-SYNC SUCCESS] " + empName + " lat=" + location.getLatitude() + " lon=" + location.getLongitude() + " at " + timeStr + " (" + triggerSource + ")");
                     // Update notification with latest location timestamp
                     NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
                     if (manager != null) {
-                        manager.notify(NOTIFICATION_ID, buildForegroundNotification("Live Ping Synced: " + timeStr + " (±" + Math.round(location.getAccuracy()) + "m)"));
+                        manager.notify(NOTIFICATION_ID, buildForegroundNotification("Live Ping Synced: " + timeStr + " (+/-" + Math.round(location.getAccuracy()) + "m)"));
                     }
                 } else {
-                    Log.w(TAG, "⚠️ [GPS PUSH HTTP " + code + "]");
+                    Log.w(TAG, "[GPS PUSH HTTP " + code + "]");
                 }
             } catch (Exception e) {
                 Log.e(TAG, "Error pushing location: " + e.getMessage());

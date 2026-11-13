@@ -1,7 +1,7 @@
 {
-  "versionCode": 2,
-  "versionName": "1.1.0",
-  "apkUrl": "https://github.com/govind1111/vassa-tracker-app/releases/download/v1.1.0/vassa-attendace.apk",
-  "releaseNotes": "v1.1.0 Update:\n• Official Vassa Properties App Icon & Header Logo\n• Monthly Attendance Summary & Daywise Register Sync\n• Direct Staff & Site Management UI\n• Enhanced GPS Geofence & Auto-Sync",
+  "versionCode": 3,
+  "versionName": "1.1.1",
+  "apkUrl": "https://github.com/govind1111/vassa-tracker-app/releases/download/v1.1.1/vassa-attendace.apk",
+  "releaseNotes": "Vassa Attendance v1.1.1 Update:\n- Direct Google Sheet Sync\n- Accurate GPS Geofence Check-In & Check-Out\n- Daywise Register & Monthly Attendance\n- Automatic In-App Updating System",
   "forceUpdate": false
 }

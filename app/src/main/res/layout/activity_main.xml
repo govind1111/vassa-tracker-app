@@ -35,7 +35,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Staff Attendance &amp; GPS Geofence System • v1.1.0"
+                android:text="Staff Attendance &amp; GPS Geofence System - v1.1.1"
                 android:textColor="#64748B"
                 android:textSize="12sp"
                 android:layout_marginTop="2dp" />
@@ -63,7 +63,7 @@
                 android:id="@+id/tvShiftTag"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="🕒 Shift: 10:00 AM — 07:00 PM"
+                android:text="Shift: 10:00 AM - 07:00 PM"
                 android:textColor="#0369A1"
                 android:textSize="11sp"
                 android:textStyle="bold"
@@ -105,7 +105,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="🔒 DEVICE LOCKED TO STAFF"
+                        android:text="DEVICE LOCKED TO STAFF"
                         android:textColor="#059669"
                         android:textSize="11sp"
                         android:textStyle="bold"
@@ -187,7 +187,7 @@
                     android:id="@+id/tvBannerTitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="🟢 Check-In Recorded Today!"
+                    android:text="Check-In Recorded Today!"
                     android:textColor="#047857"
                     android:textSize="14sp"
                     android:textStyle="bold" />
@@ -205,7 +205,7 @@
                     android:id="@+id/tvBannerWarn"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="⚡ Duty active hai. Kaam khatam hone par niche se Check-Out karein."
+                    android:text="Duty active hai. Kaam khatam hone par niche se Check-Out karein."
                     android:textColor="#047857"
                     android:textSize="11sp"
                     android:layout_marginTop="4dp" />
@@ -254,10 +254,11 @@
                     android:id="@+id/tvRadarIcon"
                     android:layout_width="38dp"
                     android:layout_height="38dp"
-                    android:text="📡"
+                    android:text=""
                     android:textSize="20sp"
                     android:gravity="center"
-                    android:layout_marginRight="10dp" />
+                    android:layout_marginRight="10dp"
+                    android:visibility="gone" />
 
                 <LinearLayout
                     android:layout_width="0dp"
@@ -287,7 +288,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="🔄 Sync"
+                    android:text="Sync"
                     android:textColor="#0369A1"
                     android:textSize="11sp"
                     android:textStyle="bold"
@@ -302,23 +303,25 @@
                 android:id="@+id/btnCheckIn"
                 android:layout_width="match_parent"
                 android:layout_height="52dp"
-                android:text="🔒 Check-In Blocked (Select Name)"
+                android:text="Check-In Blocked (Select Name)"
                 android:textColor="#FFFFFF"
                 android:textSize="14sp"
                 android:textStyle="bold"
                 android:background="@drawable/bg_btn_disabled"
                 android:enabled="false"
+                android:gravity="center"
                 android:layout_marginBottom="10dp" />
 
             <Button
                 android:id="@+id/btnCheckOut"
                 android:layout_width="match_parent"
                 android:layout_height="52dp"
-                android:text="🚪 CHECK-OUT (END DUTY)"
+                android:text="CHECK-OUT (END DUTY)"
                 android:textColor="#FFFFFF"
                 android:textSize="14sp"
                 android:textStyle="bold"
                 android:background="@drawable/bg_btn_checkout"
+                android:gravity="center"
                 android:visibility="gone"
                 android:layout_marginBottom="10dp" />
 
@@ -327,7 +330,7 @@
                 android:id="@+id/btnManualPing"
                 android:layout_width="match_parent"
                 android:layout_height="50dp"
-                android:text="📍 PING / MANUAL LOCATION SYNC"
+                android:text="PING / MANUAL LOCATION SYNC"
                 android:textColor="#0369A1"
                 android:textSize="13sp"
                 android:textStyle="bold"
@@ -351,7 +354,7 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="⏰ Shift: 10:00 AM – 07:00 PM. Grace period till 10:15 AM.\nDaily attendance summary is automatically sent to Boss at 11:00 AM."
+                android:text="Shift: 10:00 AM - 07:00 PM. Grace period till 10:15 AM.\nDaily attendance summary is automatically sent to WhatsApp Number at 11:00 AM."
                 android:textColor="#94A3B8"
                 android:textSize="11sp"
                 android:gravity="center"
@@ -364,7 +367,7 @@
             android:id="@+id/tvAdminSettings"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="⚙️ Google Apps Script Endpoint Settings"
+            android:text="Google Apps Script Endpoint Settings"
             android:textColor="#64748B"
             android:textSize="11sp"
             android:gravity="center"
