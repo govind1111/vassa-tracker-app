@@ -72,8 +72,8 @@ public class MainActivity extends AppCompatActivity {
     // Official Firebase Hosting Remote Version Auto-Update Endpoint
     public static final String DEFAULT_GITHUB_UPDATE_URL = "https://vassa-attendance.web.app/version.json";
     public static final String FALLBACK_GITHUB_UPDATE_URL = "https://raw.githubusercontent.com/govind1111/vassa-tracker-app/main/version.json";
-    public static final int CURRENT_APP_VERSION_CODE = 7; // Incremented for Single-Screen GUI Release v1.1.5
-    public static final String CURRENT_APP_VERSION_NAME = "1.1.5";
+    public static final int CURRENT_APP_VERSION_CODE = 8; // Incremented for Red Check-Out Button Release v1.1.6
+    public static final String CURRENT_APP_VERSION_NAME = "1.1.6";
 
     public static final String DEFAULT_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycby1bYzPfBAuC9niiJMBHTa4JPx5HjZog1yEnzj9oTzKbIv7EwDGX76dZ_jZHFUemQUR/exec";
 
@@ -630,6 +630,9 @@ public class MainActivity extends AppCompatActivity {
             btnCheckIn.setVisibility(View.GONE);
             btnCheckOut.setVisibility(View.VISIBLE);
             btnCheckOut.setEnabled(true);
+            btnCheckOut.setBackgroundResource(R.drawable.bg_btn_checkout);
+            btnCheckOut.setBackgroundTintList(null);
+            btnCheckOut.setText("Punch OUT (End Duty)");
         } else if (hasCheckedOut) {
             // DAY COMPLETED (Shift Completed - Both Check-In and Check-Out Done)
             llBannerStatus.setVisibility(View.VISIBLE);

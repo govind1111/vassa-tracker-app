@@ -41,16 +41,16 @@ jobs:
           name: Vassa-Attendance-App
           path: app/build/outputs/apk/debug/vassa-attendace.apk
 
-      - name: Publish GitHub Release v1.1.5
+      - name: Publish GitHub Release v1.1.6
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         with:
-          tag_name: v1.1.5
-          name: Vassa Attendance App v1.1.5
+          tag_name: v1.1.6
+          name: Vassa Attendance App v1.1.6
           body: |
-            ### Vassa Properties — Official Field Duty & Attendance Tracker (v1.1.5)
+            ### Vassa Properties — Official Field Duty & Attendance Tracker (v1.1.6)
+            - Guaranteed Bold Red Check-Out Button (AppCompatButton + backgroundTint null)
             - Clean balanced card and box margins (no overcrowding)
-            - Solid red Check-Out button matching Staff Web App style
             - Removed manual ping button for simplified, clutter-free single screen UI
             - Dual-CDN auto-updater fallback engine (Firebase Hosting + GitHub raw)
             - 100m Geofence Radar Check-In / Check-Out
