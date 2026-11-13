@@ -1,7 +1,7 @@
 {
-  "versionCode": 4,
-  "versionName": "1.1.2",
-  "apkUrl": "https://github.com/govind1111/vassa-tracker-app/releases/download/v1.1.2/vassa-attendace.apk",
+  "versionCode": 5,
+  "versionName": "1.1.3",
+  "apkUrl": "https://github.com/govind1111/vassa-tracker-app/releases/download/v1.1.3/vassa-attendace.apk",
   "releaseNotes": "New Version Released...",
   "message": "New Version Released...",
   "forceUpdate": false

@@ -71,8 +71,8 @@ public class MainActivity extends AppCompatActivity {
     // Active Google Apps Script Deployment URL
         // GitHub / Remote Version Auto-Update Endpoint
     public static final String DEFAULT_GITHUB_UPDATE_URL = "https://raw.githubusercontent.com/govind1111/vassa-tracker-app/main/version.json";
-    public static final int CURRENT_APP_VERSION_CODE = 4; // Incremented for Auto-Updater Release v1.1.2
-    public static final String CURRENT_APP_VERSION_NAME = "1.1.2";
+    public static final int CURRENT_APP_VERSION_CODE = 5; // Incremented for Auto-Updater Release v1.1.3
+    public static final String CURRENT_APP_VERSION_NAME = "1.1.3";
 
     public static final String DEFAULT_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycby1bYzPfBAuC9niiJMBHTa4JPx5HjZog1yEnzj9oTzKbIv7EwDGX76dZ_jZHFUemQUR/exec";
 
@@ -415,8 +415,8 @@ public class MainActivity extends AppCompatActivity {
     private void promptConfirmDeviceLock(StaffMember staff) {
         new AlertDialog.Builder(this)
                 .setTitle("Confirm Device Registration")
-                .setMessage("Kya aap apna phone " + staff.name + " (" + staff.id + ") ke liye lock karna chahte hain?\n\nEk baar bind hone ke baad staff member name switch nahi kar sakte (Admin PIN required).")
-                .setPositiveButton("Yes, Lock My Phone", (dialog, which) -> {
+                .setMessage("Do you want to register this device to " + staff.name + " (" + staff.id + ")?\n\nOnce registered, the staff member name cannot be changed without Admin PIN.")
+                .setPositiveButton("Register Device", (dialog, which) -> {
                     lockDeviceToStaff(staff);
                 })
                 .setNegativeButton("Cancel", (dialog, which) -> {
@@ -440,17 +440,17 @@ public class MainActivity extends AppCompatActivity {
         btnCheckIn.setOnClickListener(v -> {
             boolean isLocked = prefs.getBoolean("is_device_locked", false);
             if (!isLocked && spStaff.getSelectedItemPosition() <= 0) {
-                Toast.makeText(this, "Kripya pehle dropdown se apna name select karein!", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Please select your name from the dropdown first!", Toast.LENGTH_SHORT).show();
                 return;
             }
 
             if (isBeforeShiftStart()) {
-                Toast.makeText(this, "Check-In Blocked: Office shift subah 06:00 AM se shuru hoti hai. 06:00 AM ke pehle check-in allowed nahi hai.", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, "Check-In Blocked: Office shift starts at 06:00 AM. Check-in is not allowed before 06:00 AM.", Toast.LENGTH_LONG).show();
                 return;
             }
 
             if (isAfterEveningCutoff()) {
-                Toast.makeText(this, "Check-In Blocked: Shift samapt ho chuki hai. Evening cutoff ke baad check-in strictly band hai.", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, "Check-In Blocked: Shift has ended. Check-in is closed after evening cutoff.", Toast.LENGTH_LONG).show();
                 return;
             }
 
@@ -543,7 +543,7 @@ public class MainActivity extends AppCompatActivity {
     private void promptAdminPinReset() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Master Admin Security PIN");
-        builder.setMessage("Staff members name switch nahi kar sakte. Master Admin PIN dalein device unlock / reset karne ke liye:");
+        builder.setMessage("Staff members cannot switch names. Enter Master Admin PIN to unlock or reset device:");
 
         final EditText input = new EditText(this);
         input.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_VARIATION_PASSWORD);
@@ -566,7 +566,7 @@ public class MainActivity extends AppCompatActivity {
                 updateUI();
                 Toast.makeText(this, "Device successfully unlocked by Admin. Choose fresh name.", Toast.LENGTH_SHORT).show();
             } else {
-                Toast.makeText(this, "Galat Admin PIN! Access denied.", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, "Incorrect Admin PIN! Access denied.", Toast.LENGTH_LONG).show();
             }
         });
 
@@ -646,7 +646,7 @@ public class MainActivity extends AppCompatActivity {
             tvBannerTitle.setTextColor(0xFF0369A1);
             String checkoutTime = prefs.getString("checkout_time", "-");
             tvBannerTime.setText("In: " + checkinTime + "  |  Out: " + checkoutTime);
-            tvBannerWarn.setText("Aaj ka din complete ho chuka hai. Agla check-in kal subah open hoga.");
+            tvBannerWarn.setText("Today's shift is complete. Next check-in will open tomorrow morning.");
             tvBannerWarn.setVisibility(View.VISIBLE);
 
             // BOTH BUTTONS OFF! (User Request)
@@ -791,17 +791,17 @@ public class MainActivity extends AppCompatActivity {
                 }
 
                 if (empId.isEmpty()) {
-                    runOnUiThread(() -> Toast.makeText(MainActivity.this, "Kripya dropdown se apna name select karein!", Toast.LENGTH_LONG).show());
+                    runOnUiThread(() -> Toast.makeText(MainActivity.this, "Please select your name from the dropdown!", Toast.LENGTH_LONG).show());
                     return;
                 }
 
                 if ("Check-In".equals(punchType)) {
                     if (isBeforeShiftStart()) {
-                        runOnUiThread(() -> Toast.makeText(MainActivity.this, "Check-In Blocked: Office shift subah 06:00 AM se shuru hoti hai.", Toast.LENGTH_LONG).show());
+                        runOnUiThread(() -> Toast.makeText(MainActivity.this, "Check-In Blocked: Office shift starts at 06:00 AM.", Toast.LENGTH_LONG).show());
                         return;
                     }
                     if (isAfterEveningCutoff()) {
-                        runOnUiThread(() -> Toast.makeText(MainActivity.this, "Check-In Blocked: Evening cutoff ke baad check-in strictly band hai.", Toast.LENGTH_LONG).show());
+                        runOnUiThread(() -> Toast.makeText(MainActivity.this, "Check-In Blocked: Check-in is closed after evening cutoff.", Toast.LENGTH_LONG).show());
                         return;
                     }
                 }
@@ -933,7 +933,7 @@ public class MainActivity extends AppCompatActivity {
 
         String empId = prefs.getString("locked_emp_id", "");
         if (empId.isEmpty()) {
-            Toast.makeText(this, "Kripya pehle apna name select karke lock karein!", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Please select and register your name first!", Toast.LENGTH_SHORT).show();
             return;
         }
 
