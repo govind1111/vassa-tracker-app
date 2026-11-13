@@ -547,6 +547,7 @@ public class MainActivity extends AppCompatActivity {
         builder.setPositiveButton("Unlock", (dialog, which) -> {
             String enteredPin = input.getText().toString().trim();
             if (MASTER_ADMIN_PIN.equals(enteredPin)) {
+                String prevEmpId = prefs.getString("locked_emp_id", "");
                 prefs.edit()
                         .putBoolean("is_device_locked", false)
                         .putString("locked_emp_id", "")
@@ -559,6 +560,16 @@ public class MainActivity extends AppCompatActivity {
                 }
                 updateUI();
                 Toast.makeText(this, "Device successfully unlocked by Admin. Choose fresh name.", Toast.LENGTH_SHORT).show();
+
+                // Offer to reset today's attendance state (useful for testing / re-punch)
+                if (!prevEmpId.isEmpty()) {
+                    new AlertDialog.Builder(this)
+                            .setTitle("Reset Today's Attendance?")
+                            .setMessage("Delete today's punch record for " + prevEmpId + " and reset attendance state? (Testing / re-punch)")
+                            .setPositiveButton("Yes, Reset", (d2, w2) -> resetTodayAttendance(prevEmpId))
+                            .setNegativeButton("No", null)
+                            .show();
+                }
             } else {
                 Toast.makeText(this, "Incorrect Admin PIN! Access denied.", Toast.LENGTH_LONG).show();
             }
@@ -566,6 +577,67 @@ public class MainActivity extends AppCompatActivity {
 
         builder.setNegativeButton("Cancel", (dialog, which) -> dialog.cancel());
         builder.show();
+    }
+
+    private void resetTodayAttendance(String empId) {
+        Toast.makeText(this, "Resetting today's attendance for " + empId + "...", Toast.LENGTH_SHORT).show();
+        new Thread(() -> {
+            try {
+                String webhookUrl = prefs.getString("webhook_url", DEFAULT_WEBHOOK_URL);
+                String dateStr = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
+                JSONObject json = new JSONObject();
+                json.put("action", "delete_today_punch");
+                json.put("empId", empId);
+                json.put("date", dateStr);
+
+                URL url = new URL(webhookUrl);
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("POST");
+                conn.setRequestProperty("Content-Type", "application/json; utf-8");
+                conn.setDoOutput(true);
+                conn.setConnectTimeout(10000);
+                conn.setReadTimeout(10000);
+                try (OutputStream os = conn.getOutputStream()) {
+                    byte[] input = json.toString().getBytes(StandardCharsets.UTF_8);
+                    os.write(input, 0, input.length);
+                }
+                int code = conn.getResponseCode();
+                InputStream is = (code >= 200 && code < 300) ? conn.getInputStream() : conn.getErrorStream();
+                StringBuilder sb = new StringBuilder();
+                if (is != null) {
+                    try (BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
+                        String l;
+                        while ((l = reader.readLine()) != null) sb.append(l);
+                    }
+                }
+                conn.disconnect();
+
+                // Clear local state regardless of backend result
+                prefs.edit()
+                        .putBoolean("has_checked_in", false)
+                        .putBoolean("has_checked_out", false)
+                        .putString("checkin_time", "-")
+                        .putString("checkout_time", "-")
+                        .apply();
+
+                runOnUiThread(() -> {
+                    updateUI();
+                    Toast.makeText(MainActivity.this, "Attendance state reset. Check-In ready.", Toast.LENGTH_SHORT).show();
+                });
+            } catch (Exception e) {
+                // Still clear local state so user can re-test
+                prefs.edit()
+                        .putBoolean("has_checked_in", false)
+                        .putBoolean("has_checked_out", false)
+                        .putString("checkin_time", "-")
+                        .putString("checkout_time", "-")
+                        .apply();
+                runOnUiThread(() -> {
+                    updateUI();
+                    Toast.makeText(MainActivity.this, "Reset done (offline). Check-In ready.", Toast.LENGTH_SHORT).show();
+                });
+            }
+        }).start();
     }
 
     private void promptAdminSettings() {
