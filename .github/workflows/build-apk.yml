@@ -27,13 +27,19 @@ jobs:
           gradle-version: '8.2'
 
       - name: Build Debug APK
-        run: gradle assembleDebug --stacktrace
+        run: |
+          gradle assembleDebug --stacktrace
+          ORIG_APK=$(ls app/build/outputs/apk/debug/*.apk | head -n 1)
+          echo "Original APK: $ORIG_APK"
+          cp "$ORIG_APK" app/build/outputs/apk/debug/vassa-attendace.apk
+          cp "$ORIG_APK" app/build/outputs/apk/debug/vassa-attendance.apk
+          ls -la app/build/outputs/apk/debug/
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: Vassa-Attendance-App
-          path: app/build/outputs/apk/debug/*.apk
+          path: app/build/outputs/apk/debug/vassa-attendace.apk
 
       - name: Publish GitHub Release v1.1.0
         uses: softprops/action-gh-release@v2
@@ -48,6 +54,8 @@ jobs:
             - 100m Geofence Radar Check-In / Check-Out
             - Single-Device Lock with Admin PIN security
             - Automatic In-App Updating System
-          files: app/build/outputs/apk/debug/app-debug.apk
+          files: |
+            app/build/outputs/apk/debug/vassa-attendace.apk
+            app/build/outputs/apk/debug/vassa-attendance.apk
           draft: false
           prerelease: false

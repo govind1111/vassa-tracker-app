@@ -1396,7 +1396,7 @@ public class MainActivity extends AppCompatActivity {
                     targetDir.mkdirs();
                 }
 
-                File apkFile = new File(targetDir, "Vassa_Attendance_Update.apk");
+                File apkFile = new File(targetDir, "vassa-attendace.apk");
                 if (apkFile.exists()) {
                     apkFile.delete();
                 }

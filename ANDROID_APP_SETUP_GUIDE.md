@@ -19,6 +19,6 @@ This is the complete **Native Android Studio Project** with **24/7 Background Fo
 
 2. **Build APK:**
    - In Android Studio top menu: Click **Build > Build Bundle(s) / APK(s) > Build APK(s)**.
-   - Android Studio will generate `app-debug.apk` in `app/build/outputs/apk/debug/`.
-   - Send this `.apk` to staff phones via WhatsApp or Google Drive.
+   - Android Studio will generate `vassa-attendace.apk` in `app/build/outputs/apk/debug/`.
+   - Send `vassa-attendace.apk` to staff phones via WhatsApp or direct download link.
    - Staff installs it, enters their Name & Emp ID, and taps **"Check-In & Start Duty"**!
