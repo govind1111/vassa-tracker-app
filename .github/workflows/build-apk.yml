@@ -26,12 +26,20 @@ jobs:
         with:
           gradle-version: '8.2'
 
+      - name: Read version from version.json
+        id: version
+        run: |
+          VERSION_NAME=$(node -e "console.log(require('./version.json').versionName)")
+          VERSION_CODE=$(node -e "console.log(require('./version.json').versionCode)")
+          echo "name=$VERSION_NAME" >> $GITHUB_OUTPUT
+          echo "code=$VERSION_CODE" >> $GITHUB_OUTPUT
+          echo "Resolved version: $VERSION_NAME (code $VERSION_CODE)"
+
       - name: Build Debug APK
         run: |
           gradle assembleDebug --stacktrace
           ORIG_APK=$(ls app/build/outputs/apk/debug/*.apk | head -n 1)
           echo "Original APK: $ORIG_APK"
-          cp "$ORIG_APK" app/build/outputs/apk/debug/vassa-attendace.apk
           cp "$ORIG_APK" app/build/outputs/apk/debug/vassa-attendance.apk
           ls -la app/build/outputs/apk/debug/
 
@@ -39,24 +47,23 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Vassa-Attendance-App
-          path: app/build/outputs/apk/debug/vassa-attendace.apk
+          path: app/build/outputs/apk/debug/vassa-attendance.apk
 
-      - name: Publish GitHub Release v1.1.6
+      - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         with:
-          tag_name: v1.1.6
-          name: Vassa Attendance App v1.1.6
+          tag_name: v${{ steps.version.outputs.name }}
+          name: Vassa Attendance App v${{ steps.version.outputs.name }}
           body: |
-            ### Vassa Properties — Official Field Duty & Attendance Tracker (v1.1.6)
-            - Guaranteed Bold Red Check-Out Button (AppCompatButton + backgroundTint null)
-            - Clean balanced card and box margins (no overcrowding)
-            - Removed manual ping button for simplified, clutter-free single screen UI
-            - Dual-CDN auto-updater fallback engine (Firebase Hosting + GitHub raw)
+            ### Vassa Properties — Official Field Duty & Attendance Tracker (v${{ steps.version.outputs.name }})
+            - Auto-built from version.json (versionCode ${{ steps.version.outputs.code }})
+            - Single-screen staff app, no pull-to-refresh
             - 100m Geofence Radar Check-In / Check-Out
+            - Background GPS tracking (5-min sync to Live_Tracking)
             - Single-Device Lock with Admin PIN security
+            - Auto-update via Firebase Hosting + GitHub raw fallback
           files: |
-            app/build/outputs/apk/debug/vassa-attendace.apk
             app/build/outputs/apk/debug/vassa-attendance.apk
           draft: false
           prerelease: false
