@@ -69,8 +69,8 @@ public class MainActivity extends AppCompatActivity {
     public static final int DEFAULT_CUTOFF_MIN = 30;       // 30 Mins -> 07:30 PM Hard Cutoff
 
     // Active Google Apps Script Deployment URL
-        // GitHub / Remote Version Auto-Update Endpoint
-    public static final String DEFAULT_GITHUB_UPDATE_URL = "https://raw.githubusercontent.com/govind1111/vassa-tracker-app/main/version.json";
+    // Official Firebase Hosting Remote Version Auto-Update Endpoint
+    public static final String DEFAULT_GITHUB_UPDATE_URL = "https://vassa-attendance.web.app/version.json";
     public static final int CURRENT_APP_VERSION_CODE = 5; // Incremented for Auto-Updater Release v1.1.3
     public static final String CURRENT_APP_VERSION_NAME = "1.1.3";
 
