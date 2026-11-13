@@ -622,7 +622,7 @@ public class MainActivity extends AppCompatActivity {
             // ON DUTY (Awaiting Check-Out)
             llBannerStatus.setVisibility(View.VISIBLE);
             llBannerStatus.setBackgroundResource(R.drawable.bg_radar_inside);
-            tvBannerTitle.setText("Check-In Recorded (On Duty)");
+            tvBannerTitle.setText("Checked-In");
             tvBannerTitle.setTextColor(0xFF047857);
             tvBannerTime.setText("Time: " + checkinTime + " (Present)");
             tvBannerWarn.setVisibility(View.GONE); // NIKAL DIYA (User Request)
@@ -637,12 +637,11 @@ public class MainActivity extends AppCompatActivity {
             // DAY COMPLETED (Shift Completed - Both Check-In and Check-Out Done)
             llBannerStatus.setVisibility(View.VISIBLE);
             llBannerStatus.setBackgroundResource(R.drawable.bg_radar_locating);
-            tvBannerTitle.setText("Shift Completed (Checked-Out)");
+            tvBannerTitle.setText("Checked-Out");
             tvBannerTitle.setTextColor(0xFF0369A1);
             String checkoutTime = prefs.getString("checkout_time", "-");
             tvBannerTime.setText("In: " + checkinTime + "  |  Out: " + checkoutTime);
-            tvBannerWarn.setText("Today's shift is complete. Next check-in will open tomorrow morning.");
-            tvBannerWarn.setVisibility(View.VISIBLE);
+            tvBannerWarn.setVisibility(View.GONE);
 
             // BOTH BUTTONS OFF! (User Request)
             btnCheckIn.setVisibility(View.GONE);
@@ -720,7 +719,7 @@ public class MainActivity extends AppCompatActivity {
             if (!hasCheckedIn) {
                 btnCheckIn.setEnabled(true);
                 btnCheckIn.setBackgroundResource(R.drawable.bg_btn_checkin);
-                btnCheckIn.setText("Check-In Now (" + Math.round(distanceToSite) + "m)");
+                btnCheckIn.setText("Check-In (" + Math.round(distanceToSite) + "m)");
             }
         } else {
             // OUTSIDE 100m GEOFENCE

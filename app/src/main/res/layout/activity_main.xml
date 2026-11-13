@@ -234,7 +234,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="2. CURRENT DUTY LOCATION / PROJECT SITE:"
+                    android:text="2. Office/Site Location:"
                     android:textColor="#475569"
                     android:textSize="10sp"
                     android:textStyle="bold"
@@ -345,17 +345,7 @@
                 android:visibility="gone"
                 android:layout_marginBottom="10dp" />
 
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Shift: 10:00 AM - 07:00 PM | Auto Checkout: 08:30 PM"
-                android:textColor="#94A3B8"
-                android:textSize="10sp"
-                android:fontFamily="sans-serif"
-                android:gravity="center"
-                android:layout_marginTop="6dp" />
-
-        </LinearLayout>
+                    </LinearLayout>
 
         <!-- Footer / Settings Link -->
         <TextView
