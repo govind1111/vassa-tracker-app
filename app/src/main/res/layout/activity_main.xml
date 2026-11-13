@@ -197,9 +197,9 @@
                     android:id="@+id/tvBannerTitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Check-In Recorded Today!"
+                    android:text="Checked-In"
                     android:textColor="#047857"
-                    android:textSize="13sp"
+                    android:textSize="18sp"
                     android:textStyle="bold"
                     android:fontFamily="sans-serif" />
 
