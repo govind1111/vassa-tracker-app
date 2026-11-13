@@ -71,8 +71,8 @@ public class MainActivity extends AppCompatActivity {
     // Active Google Apps Script Deployment URL
     // Official Firebase Hosting Remote Version Auto-Update Endpoint
     public static final String DEFAULT_GITHUB_UPDATE_URL = "https://vassa-attendance.web.app/version.json";
-    public static final int CURRENT_APP_VERSION_CODE = 5; // Incremented for Auto-Updater Release v1.1.3
-    public static final String CURRENT_APP_VERSION_NAME = "1.1.3";
+    public static final int CURRENT_APP_VERSION_CODE = 6; // Incremented for Single-Screen GUI Release v1.1.4
+    public static final String CURRENT_APP_VERSION_NAME = "1.1.4";
 
     public static final String DEFAULT_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycby1bYzPfBAuC9niiJMBHTa4JPx5HjZog1yEnzj9oTzKbIv7EwDGX76dZ_jZHFUemQUR/exec";
 
