@@ -17,8 +17,8 @@ android {
         applicationId "com.vassa.attendance"
         minSdk 23
         targetSdk 34
-        versionCode 8
-        versionName "1.1.6"
+        versionCode 1
+        versionName "1.0.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
