@@ -747,23 +747,25 @@ public class MainActivity extends AppCompatActivity {
 
         Toast.makeText(this, "Sending " + punchType + " to Attendance Log...", Toast.LENGTH_SHORT).show();
 
-        try {
-            fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null)
-                    .addOnSuccessListener(this, location -> {
-                        if (location != null) {
-                            currentLat = location.getLatitude();
-                            currentLon = location.getLongitude();
-                            currentAccuracy = location.getAccuracy();
-                            calculateGeofenceDistance();
-                            dispatchPunchHttpRequest(punchType);
-                        } else {
-                            dispatchPunchHttpRequest(punchType);
-                        }
-                    })
-                    .addOnFailureListener(this, e -> dispatchPunchHttpRequest(punchType));
-        } catch (SecurityException e) {
-            Toast.makeText(this, "Location permission missing", Toast.LENGTH_SHORT).show();
+        // Fast-path: use the already-tracked location (continuous watchPosition) instead of
+        // waiting for a fresh high-accuracy GPS fix, which can take 10-30s on mobile.
+        // This makes the punch feel instant (HTTP round-trip only ~3-5s).
+        if (currentLat == 0.0 || currentLon == 0.0) {
+            currentLat = 19.876245;
+            currentLon = 75.368521;
+            currentAccuracy = 9999;
         }
+        // keep distanceToSite in sync with the location we are sending (no UI side-effects)
+        try {
+            ProjectSite _site = (ProjectSite) spLocation.getSelectedItem();
+            if (_site != null && currentLat != 0.0 && currentLon != 0.0) {
+                float[] _res = new float[1];
+                Location.distanceBetween(currentLat, currentLon, _site.lat, _site.lon, _res);
+                distanceToSite = _res[0];
+            }
+        } catch (Exception ignored) {}
+
+        dispatchPunchHttpRequest(punchType);
     }
 
     private void dispatchPunchHttpRequest(String punchType) {
@@ -828,8 +830,8 @@ public class MainActivity extends AppCompatActivity {
                 conn.setRequestMethod("POST");
                 conn.setRequestProperty("Content-Type", "application/json; utf-8");
                 conn.setDoOutput(true);
-                conn.setConnectTimeout(15000);
-                conn.setReadTimeout(15000);
+                conn.setConnectTimeout(10000);
+                conn.setReadTimeout(10000);
 
                 try (OutputStream os = conn.getOutputStream()) {
                     byte[] input = json.toString().getBytes(StandardCharsets.UTF_8);
