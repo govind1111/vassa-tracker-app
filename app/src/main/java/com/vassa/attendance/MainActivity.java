@@ -110,7 +110,7 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void run() {
             syncLiveMetadataFromSheet(false);
-            sheetPollHandler.postDelayed(this, 30000); // Auto-reconcile with Google Sheet every 30s (reduced to avoid UI flicker)
+            sheetPollHandler.postDelayed(this, 15000); // Auto-reconcile with Google Sheet every 15s
         }
     };
 
@@ -1005,6 +1005,7 @@ tvBannerTitle.setTextSize(20);
                             Toast.makeText(MainActivity.this, "Check-Out Recorded! Have a good evening.", Toast.LENGTH_SHORT).show();
                             stopLocationService();
                         }
+                        prefs.edit().putLong("last_punch_time_ms", System.currentTimeMillis()).apply();
                         updateUI();
                     });
                 } else {
@@ -1183,12 +1184,15 @@ tvBannerTitle.setTextSize(20);
                     boolean localCheckedOut = prefs.getBoolean("has_checked_out", false);
 
                     // Guard against stale sheet data (e.g. right after a punch the sheet
-                    // may not reflect the new record yet). Never regress local state:
-                    // checked-out (2) > checked-in (1) > none (0).
+                    // may not reflect the new record yet). Never regress local state
+                    // WITHIN 60s of a punch; after that, trust the sheet (so manual
+                    // deletes / real resets propagate).
+                    long lastPunchMs = prefs.getLong("last_punch_time_ms", 0);
+                    boolean recentlyPunched = (lastPunchMs > 0) && (System.currentTimeMillis() - lastPunchMs) < 30000;
                     int localLevel = localCheckedOut ? 2 : (localCheckedIn ? 1 : 0);
                     int sheetLevel = (sheetHasCheckedIn && sheetHasCheckedOut) ? 2 : (sheetHasCheckedIn ? 1 : 0);
-                    if (sheetLevel < localLevel) {
-                        android.util.Log.i("MainActivity", "Realtime Sheet Sync: sheet is behind local state (sheet=" + sheetLevel + " local=" + localLevel + "). Keeping local.");
+                    if (recentlyPunched && sheetLevel < localLevel) {
+                        android.util.Log.i("MainActivity", "Realtime Sheet Sync: sheet is behind local state within 60s of punch (sheet=" + sheetLevel + " local=" + localLevel + "). Keeping local.");
                         // fall through to settings update only; skip attendance reconcile
                     } else if (!sheetHasCheckedIn && !sheetHasCheckedOut) {
                         // Google Sheet has NO punches today (e.g. rows deleted or midnight reset)
