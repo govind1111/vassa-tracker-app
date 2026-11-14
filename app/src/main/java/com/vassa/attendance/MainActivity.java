@@ -106,6 +106,7 @@ public class MainActivity extends AppCompatActivity {
     private Runnable clockRunnable;
 
     private Handler sheetPollHandler = new Handler(Looper.getMainLooper());
+    private boolean forceSheetSync = false; // bypass stale-sheet guard on user-initiated sync
     private Runnable sheetPollRunnable = new Runnable() {
         @Override
         public void run() {
@@ -191,6 +192,12 @@ public class MainActivity extends AppCompatActivity {
         // Immediately sync live staff list and sites from Google Sheet
         syncLiveMetadataFromSheet(false);
         checkForAppUpdate(false);
+
+        // Start periodic sheet reconciliation (every 15s) so manual deletes / resets propagate
+        if (sheetPollHandler != null && sheetPollRunnable != null) {
+            sheetPollHandler.removeCallbacks(sheetPollRunnable);
+            sheetPollHandler.postDelayed(sheetPollRunnable, 15000);
+        }
     }
 
     @Override
@@ -205,8 +212,17 @@ public class MainActivity extends AppCompatActivity {
             stopLocationService();
         }
         updateUI();
+        // User actively opened the app -> trust the sheet (bypass stale guard) so resets propagate
+        forceSheetSync = true;
         syncLiveMetadataFromSheet(false);
+        forceSheetSync = false;
         checkForAppUpdate(false);
+
+        // Restart periodic sync loop
+        if (sheetPollHandler != null && sheetPollRunnable != null) {
+            sheetPollHandler.removeCallbacks(sheetPollRunnable);
+            sheetPollHandler.postDelayed(sheetPollRunnable, 15000);
+        }
     }
 
     // ==============================================================================
@@ -1097,6 +1113,14 @@ tvBannerTitle.setTextSize(20);
     }
 
     @Override
+    protected void onPause() {
+        super.onPause();
+        if (sheetPollHandler != null && sheetPollRunnable != null) {
+            sheetPollHandler.removeCallbacks(sheetPollRunnable);
+        }
+    }
+
+    @Override
     protected void onDestroy() {
         super.onDestroy();
         if (fusedLocationClient != null && locationCallback != null) {
@@ -1191,7 +1215,7 @@ tvBannerTitle.setTextSize(20);
                     boolean recentlyPunched = (lastPunchMs > 0) && (System.currentTimeMillis() - lastPunchMs) < 30000;
                     int localLevel = localCheckedOut ? 2 : (localCheckedIn ? 1 : 0);
                     int sheetLevel = (sheetHasCheckedIn && sheetHasCheckedOut) ? 2 : (sheetHasCheckedIn ? 1 : 0);
-                    if (recentlyPunched && sheetLevel < localLevel) {
+                    if (!forceSheetSync && recentlyPunched && sheetLevel < localLevel) {
                         android.util.Log.i("MainActivity", "Realtime Sheet Sync: sheet is behind local state within 60s of punch (sheet=" + sheetLevel + " local=" + localLevel + "). Keeping local.");
                         // fall through to settings update only; skip attendance reconcile
                     } else if (!sheetHasCheckedIn && !sheetHasCheckedOut) {
