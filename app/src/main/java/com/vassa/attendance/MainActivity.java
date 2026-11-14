@@ -997,12 +997,13 @@ tvBannerTitle.setTextSize(20);
                     isSuccess = true;
                 }
 
+                final JSONObject finalRespObj = respObj;
                 if (isSuccess) {
                     runOnUiThread(() -> {
-                        String timeNow = (respObj != null && !respObj.optString("punchTime", "").isEmpty())
-                                ? respObj.optString("punchTime")
+                        String timeNow = (finalRespObj != null && !finalRespObj.optString("punchTime", "").isEmpty())
+                                ? finalRespObj.optString("punchTime")
                                 : new SimpleDateFormat("hh:mm a", Locale.getDefault()).format(new Date());
-                        String srvStatus = (respObj != null) ? respObj.optString("punchStatus", respObj.optString("status", "")) : "";
+                        String srvStatus = (finalRespObj != null) ? finalRespObj.optString("punchStatus", finalRespObj.optString("status", "")) : "";
                         if ("Check-In".equals(punchType)) {
                             prefs.edit()
                                     .putBoolean("has_checked_in", true)
