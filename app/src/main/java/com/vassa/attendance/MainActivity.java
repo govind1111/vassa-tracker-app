@@ -820,6 +820,18 @@ tvBannerTitle.setTextSize(20);
 
         Toast.makeText(this, "Sending " + punchType + " to Attendance Log...", Toast.LENGTH_SHORT).show();
 
+        // Disable punch button during request (prevent double-punch)
+        runOnUiThread(() -> {
+            if (btnCheckIn != null && btnCheckIn.getVisibility() == View.VISIBLE) {
+                btnCheckIn.setEnabled(false);
+                btnCheckIn.setText("⏳ Saving...");
+            }
+            if (btnCheckOut != null && btnCheckOut.getVisibility() == View.VISIBLE) {
+                btnCheckOut.setEnabled(false);
+                btnCheckOut.setText("⏳ Saving...");
+            }
+        });
+
         // Fast-path: use the already-tracked location (continuous watchPosition) instead of
         // waiting for a fresh high-accuracy GPS fix, which can take 10-30s on mobile.
         // This makes the punch feel instant (HTTP round-trip only ~3-5s).
@@ -957,14 +969,30 @@ tvBannerTitle.setTextSize(20);
                     }
                 }
 
-                if (code == 200 || code == 302) {
+                boolean isSuccess = (respObj != null && "success".equalsIgnoreCase(respObj.optString("status", "")));
+                if (respObj != null) {
+                    String st = respObj.optString("status", "");
+                    if (st.startsWith("blocked") || "error".equalsIgnoreCase(st)) {
+                        isSuccess = false;
+                    }
+                }
+                // If backend returned a usable response with a punchTime, treat as success
+                if (!isSuccess && respObj != null && !respObj.optString("punchTime", "").isEmpty()) {
+                    isSuccess = true;
+                }
+
+                if (isSuccess) {
                     runOnUiThread(() -> {
-                        String timeNow = new SimpleDateFormat("hh:mm a", Locale.getDefault()).format(new Date());
+                        String timeNow = (respObj != null && !respObj.optString("punchTime", "").isEmpty())
+                                ? respObj.optString("punchTime")
+                                : new SimpleDateFormat("hh:mm a", Locale.getDefault()).format(new Date());
+                        String srvStatus = (respObj != null) ? respObj.optString("punchStatus", respObj.optString("status", "")) : "";
                         if ("Check-In".equals(punchType)) {
                             prefs.edit()
                                     .putBoolean("has_checked_in", true)
                                     .putBoolean("has_checked_out", false)
                                     .putString("checkin_time", timeNow)
+                                    .putString("checkin_status", srvStatus.isEmpty() ? "Present" : srvStatus)
                                     .apply();
                             Toast.makeText(MainActivity.this, "Check-In Recorded for " + finalEmpName + "!", Toast.LENGTH_SHORT).show();
                             startLocationService();
@@ -978,13 +1006,15 @@ tvBannerTitle.setTextSize(20);
                             stopLocationService();
                         }
                         updateUI();
-                        // Do NOT sync immediately after punch — the sheet may not reflect the
-                        // new punch yet, which caused the check-out button to flicker.
-                        // Local prefs are authoritative right after a punch; periodic sync
-                        // (onResume / background) will reconcile later.
                     });
                 } else {
-                    runOnUiThread(() -> Toast.makeText(MainActivity.this, "Punch response HTTP " + code, Toast.LENGTH_LONG).show());
+                    String errMsg = (respObj != null && !respObj.optString("message", "").isEmpty())
+                            ? respObj.optString("message") : ("Punch failed (HTTP " + code + ")");
+                    runOnUiThread(() -> {
+                        Toast.makeText(MainActivity.this, errMsg, Toast.LENGTH_LONG).show();
+                        if (btnCheckIn != null && btnCheckIn.getVisibility() == View.VISIBLE) btnCheckIn.setEnabled(true);
+                        if (btnCheckOut != null && btnCheckOut.getVisibility() == View.VISIBLE) btnCheckOut.setEnabled(true);
+                    });
                 }
                 conn.disconnect();
             } catch (Exception e) {
